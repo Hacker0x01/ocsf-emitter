@@ -1,0 +1,102 @@
+[project]
+name = "ocsf-emitter"
+version = "0.1.0"
+description = "Construct, validate, and emit OCSF Detection Finding (class_uid 2004) events with a consistent shape."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "HackerOne" }]
+keywords = ["ocsf", "detection", "finding", "security-lake", "siem"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.6,<3",
+]
+
+[project.optional-dependencies]
+# Only needed to regenerate the vendored OCSF models (scripts/gen_models.py).
+codegen = [
+    "ocsf-lib>=0.10,<1",
+    "datamodel-code-generator[http]>=0.25",
+]
+# Parquet writer for AWS Security Lake ingestion (ocsf_emitter.securitylake).
+securitylake = [
+    "pyarrow>=14",
+]
+
+[project.urls]
+Homepage = "https://github.com/Hacker0x01/ocsf-emitter"
+Documentation = "https://hacker0x01.github.io/ocsf-emitter/"
+Repository = "https://github.com/Hacker0x01/ocsf-emitter"
+Issues = "https://github.com/Hacker0x01/ocsf-emitter/issues"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.9",
+    "pytest>=8",
+    "ruff>=0.4",
+    "pyarrow>=14",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.26",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ocsf_emitter"]
+# Ship py.typed and the vendored schema is embedded as generated code.
+artifacts = ["src/ocsf_emitter/py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+# The generated model module is machine-authored; do not lint or format it.
+extend-exclude = ["src/ocsf_emitter/_models.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "D", "ANN"]
+# The generated model module is machine-authored; do not lint it.
+exclude = ["src/ocsf_emitter/_models.py"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests: docstrings and full annotations are not required.
+"tests/**" = ["D", "ANN"]
+# Dev tooling script: relax docstring rules; it uses Any deliberately.
+"scripts/**" = ["D", "ANN401"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src/ocsf_emitter", "tests"]
+# The generated model module is not authored to strict standards.
+[[tool.mypy.overrides]]
+module = "ocsf_emitter._models"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["pyarrow.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

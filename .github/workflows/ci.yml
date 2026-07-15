@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    name: Lint, type-check, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # dev group (ruff/mypy/pytest/pyarrow) is installed by default; the
+      # securitylake extra provides pyarrow at runtime for the module under test.
+      - name: Sync project
+        run: uv sync --extra securitylake
+
+      - name: Ruff (lint)
+        run: uv run ruff check .
+
+      - name: Ruff (format check)
+        run: uv run ruff format --check .
+
+      - name: Mypy (strict)
+        run: uv run mypy
+
+      - name: Pytest (unit)
+        # Exclude the AWS integ test here; it runs as its own blocking job.
+        run: uv run pytest -q --ignore=tests/test_integ_aws_validation.py
+
+  aws-validation:
+    name: AWS Security Lake OCSF validation (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync project
+        run: uv sync --extra securitylake
+
+      # Pin the AWS OCSF validation tool at a known-good commit for
+      # reproducibility. Bump AWS_VALIDATION_SHA deliberately after review.
+      - name: Check out AWS OCSF validation tool (pinned)
+        env:
+          AWS_VALIDATION_SHA: 3811c95e44f2078588de20dd615e4cd34e9928b3
+        run: |
+          git clone https://github.com/aws-samples/amazon-security-lake-ocsf-validation.git aws-ocsf-tool
+          cd aws-ocsf-tool
+          git checkout "$AWS_VALIDATION_SHA"
+
+      - name: Install AWS tool dependencies into the project env
+        run: uv pip install -r aws-ocsf-tool/requirements.txt
+
+      - name: Validate emitted findings against the AWS tool
+        env:
+          OCSF_AWS_VALIDATION_DIR: ${{ github.workspace }}/aws-ocsf-tool
+        # No skip allowed here: the env var is set, so the test must run and pass.
+        run: uv run pytest -q tests/test_integ_aws_validation.py -v

@@ -1,0 +1,59 @@
+{
+  "activity_id": 1,
+  "category_name": "Findings",
+  "category_uid": 2,
+  "class_name": "Detection Finding",
+  "class_uid": 2004,
+  "confidence_id": 3,
+  "confidence_score": 95,
+  "count": 1,
+  "finding_info": {
+    "attacks": [
+      {
+        "tactics": [
+          {
+            "name": "Initial Access",
+            "uid": "TA0001"
+          }
+        ],
+        "technique": {
+          "name": "Valid Accounts",
+          "uid": "T1078"
+        }
+      }
+    ],
+    "data_sources": [
+      "okta.system_log"
+    ],
+    "desc": "Geo-velocity rule R-42 fired.",
+    "title": "Impossible-travel login",
+    "uid": "det-2026-0715-001"
+  },
+  "message": "User alice logged in from two continents within 4 minutes.",
+  "metadata": {
+    "product": {
+      "name": "Example Detector",
+      "vendor_name": "Example, Inc.",
+      "version": "1.0.0"
+    },
+    "version": "1.1.0"
+  },
+  "observables": [
+    {
+      "name": "user_name",
+      "type_id": 4,
+      "value": "alice"
+    },
+    {
+      "name": "ip_address",
+      "type_id": 2,
+      "value": "203.0.113.7"
+    }
+  ],
+  "risk_level_id": 3,
+  "risk_score": 80,
+  "severity_id": 4,
+  "status_id": 1,
+  "time": 1752566400000,
+  "type_uid": 200401
+}

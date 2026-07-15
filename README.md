@@ -1,0 +1,228 @@
+# ocsf-emitter
+
+Construct, validate, and emit **OCSF Detection Finding** events (`class_uid`
+2004) with a consistent shape and mandatory runtime validation.
+
+This is an internal library. Other services import it to turn their own
+detection signals into valid OCSF findings; the library owns the OCSF field
+names, the schema-version pin, the house defaults, and validation. **Transport
+is deliberately out of scope** -- `emit()` returns a validated,
+JSON-serializable payload and the caller ships it however it likes.
+
+## Install
+
+```bash
+uv pip install -e .                  # runtime: pydantic only
+uv pip install -e ".[securitylake]"  # + pyarrow, for the Parquet writer
+uv pip install -e ".[dev]"           # + mypy, pytest, ruff (and pyarrow)
+uv pip install -e ".[codegen]"       # + tools to regenerate the OCSF models
+```
+
+## Usage
+
+```python
+import ocsf_emitter
+from ocsf_emitter import (
+    build_detection_finding, emit,
+    Severity, Status, Activity, Confidence, RiskLevel,
+    Observable, ObservableType, MitreAttack,
+)
+
+# Configure the emitting product once at startup (see "Product identity").
+ocsf_emitter.configure_product(name="Example Detector", vendor_name="Example, Inc.")
+
+finding = build_detection_finding(
+    uid="det-2026-0715-001",             # stable id -> finding_info.uid
+    title="Impossible-travel login",
+    severity=Severity.HIGH,              # our enum -> OCSF severity_id
+    message="User alice logged in from two continents within 4 minutes.",
+    status=Status.NEW,                   # -> status_id
+    activity=Activity.CREATE,            # -> activity_id + type_uid
+    observables=[
+        Observable(ObservableType.USER_NAME, "alice"),
+        Observable(ObservableType.IP_ADDRESS, "203.0.113.7"),
+    ],
+    confidence=Confidence.HIGH,          # -> confidence_id
+    risk_level=RiskLevel.HIGH,           # -> risk_level_id
+    attacks=[MitreAttack("T1078", "Valid Accounts", "TA0001", "Initial Access")],
+)
+
+payload = emit(finding)   # validates, returns dict; raises InvalidFindingError if invalid
+```
+
+`build_detection_finding(...)` returns a **typed, already-valid**
+`DetectionFinding` model instance. `emit(...)` runs full validation and returns
+a `dict`; `emit_json(...)` returns a JSON string. `build_from_signal(signal)`
+takes a `DetectionSignal` dataclass if you'd rather build the domain object
+yourself.
+
+See [`tests/golden_detection_finding.json`](tests/golden_detection_finding.json)
+for a full sample payload you can eyeball against the OCSF `detection_finding`
+spec.
+
+## How validation behaves
+
+Validation is **mandatory and automatic** inside `emit()`/`emit_json()`, and is
+also callable standalone via `validate(finding)`. It does two things:
+
+1. **Schema validation** -- re-runs Pydantic validation over the finding's
+   current field values (catching any mutation after construction).
+2. **OCSF invariant checks** -- verifies `class_uid == 2004`,
+   `category_uid == 2`, `type_uid == class_uid*100 + activity_id`, and that
+   `metadata.version` matches the pinned schema version.
+
+On failure it raises `InvalidFindingError`, whose message and `.field_errors`
+list **name the offending field(s)**:
+
+```
+ocsf_emitter.errors.InvalidFindingError: Detection finding failed OCSF schema validation
+  - severity_id: Input should be 0, 1, 2, 3, 4, 5, 6 or 99
+```
+
+## Model layer: chosen path and rationale
+
+We generate a **full Pydantic v2 model tree** from OCSF's JSON Schema using
+[`datamodel-code-generator`](https://github.com/koxudaxi/datamodel-code-generator),
+and **commit the result** to
+[`src/ocsf_emitter/_models.py`](src/ocsf_emitter/_models.py). At runtime the
+package depends only on `pydantic` -- no network access, no code generation.
+
+Why this rather than `py-ocsf-models`? The task allowed either; we chose
+schema-generation for two reasons:
+
+- **Exact fidelity to a pinned OCSF version.** The models come straight from
+  the OCSF schema for the exact version we pin -- no dependency on a third
+  party's release cadence for `detection_finding` coverage.
+- **Self-contained and auditable.** The generated module is committed and
+  reviewable, and regeneration is a single script.
+
+### How the pinned version is generated
+
+We must pin an **older** OCSF version (1.1.0 -- see Security Lake below), and
+the OCSF JSON Schema HTTP endpoint only serves the *latest* deployed version. So
+`scripts/gen_models.py`:
+
+1. Fetches the pinned version's **metaschema** with `ocsf-lib`
+   (`OcsfApiClient().get_schema("1.1.0")`) -- this works for any version.
+2. Converts that metaschema (the `detection_finding` class plus its transitive
+   object closure) into a self-contained draft **JSON Schema**. Attributes
+   tagged with an OCSF `profile` (e.g. `cloud`, `osint`) are dropped so we get
+   the **base** class -- mirroring the schema server's `?profiles=` selector,
+   and keeping profile-only fields out of the required list.
+3. Feeds that JSON Schema to `datamodel-code-generator` -> Pydantic v2.
+
+## Bumping the OCSF schema version
+
+> **Before bumping:** if you ship to AWS Security Lake, confirm the target
+> version is one Security Lake accepts (see below). The CI `aws-validation` job
+> is a hard gate and will fail for unsupported versions.
+
+1. Regenerate the models for the desired version:
+
+   ```bash
+   uv run --extra codegen python scripts/gen_models.py 1.1.0
+   ```
+
+2. Update the **one-line** pin in
+   [`src/ocsf_emitter/defaults.py`](src/ocsf_emitter/defaults.py) to match:
+
+   ```python
+   OCSF_SCHEMA_VERSION = "1.1.0"   # <- change this
+   ```
+
+3. Run the suite and review the golden diff:
+
+   ```bash
+   uv run pytest && uv run mypy && uv run ruff check .
+   ```
+
+   If the emitted shape changed intentionally, regenerate
+   `tests/golden_detection_finding.json` and review the diff. Note that a newer
+   version may reintroduce `RootModel`/union wrappers on some objects, which
+   would require builder adjustments.
+
+## AWS Security Lake compatibility
+
+This package targets **AWS Security Lake custom-source** ingestion.
+
+**Version.** Security Lake custom sources accept OCSF **1.1.0 / 1.0.0-rc.2**, and
+the [AWS OCSF validation tool](https://github.com/aws-samples/amazon-security-lake-ocsf-validation)
+maps `detection_finding` only under **1.1.0**. We therefore pin **1.1.0**
+(not a newer version). To keep findings acceptable, the builder also stamps the
+sibling label fields Security Lake expects: `class_name` (`"Detection Finding"`)
+and `category_name` (`"Findings"`).
+
+**Validation is proven against AWS's own tool.** CI runs that tool against an
+emitted finding as a **blocking** job
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)), pinned at a known
+commit. Locally:
+
+```bash
+git clone https://github.com/aws-samples/amazon-security-lake-ocsf-validation.git /tmp/aws-ocsf
+uv pip install -e ".[securitylake]" && uv pip install -r /tmp/aws-ocsf/requirements.txt pytest
+OCSF_AWS_VALIDATION_DIR=/tmp/aws-ocsf uv run pytest tests/test_integ_aws_validation.py -v
+```
+
+**Parquet packaging.** Security Lake wants **Parquet** objects (not JSON),
+zstd-compressed, partitioned in S3 and sorted by time. The optional
+`ocsf_emitter.securitylake` module (install the `securitylake` extra) does this
+without touching S3 -- you upload the returned bytes at the returned key:
+
+```python
+from ocsf_emitter import securitylake as sl
+
+obj = sl.build_parquet_object(
+    findings,                       # a batch of built findings
+    source_location="my_detector",  # the prefix Security Lake assigned you
+    region="us-east-1",
+    account_id="123456789012",
+    object_name="batch-001",
+)
+# obj.key  -> ext/my_detector/region=us-east-1/accountId=.../eventDay=YYYYMMDD/batch-001.parquet
+# obj.data -> Parquet bytes (zstd); upload to your Security Lake S3 bucket at obj.key
+```
+
+The writer validates every finding (via `emit`), sorts records by `time`, uses
+zstd compression, and bounds data-page (<=1 MB) and row-group sizes per the
+Security Lake custom-source requirements.
+
+## Product identity
+
+The emitting product is **configurable**, not hardcoded, so any service can use
+this library. Set it once at startup:
+
+```python
+ocsf_emitter.configure_product(name="My Service", vendor_name="My Org")
+```
+
+or pass `product=ocsf_emitter.make_product(...)` per call. Building a finding
+with no product configured raises `OcsfEmitterError` rather than emitting an
+unattributed finding.
+
+## Package layout
+
+```
+src/ocsf_emitter/
+  __init__.py     public API: build_detection_finding, build_from_signal, emit, ...
+  domain.py       our domain shapes: DetectionSignal, Observable, MitreAttack, enums
+  builders.py     domain signal  ->  OCSF DetectionFinding
+  defaults.py     schema-version pin, metadata/product, severity/status/... mappings
+  validate.py     runtime validation; raises InvalidFindingError
+  emit.py         serialize to JSON dict/str (transport-agnostic)
+  securitylake.py OCSF -> Parquet for AWS Security Lake (needs [securitylake] extra)
+  errors.py       OcsfEmitterError, InvalidFindingError
+  _models.py      GENERATED OCSF Pydantic models (do not edit by hand)
+scripts/gen_models.py   regenerate _models.py (metaschema -> JSON Schema -> Pydantic)
+tests/                  mappings, builder/emit, validation-rejection, golden, parquet
+tests/test_integ_aws_validation.py   runs the AWS OCSF validation tool (CI-gated)
+.github/workflows/ci.yml              unit job + blocking AWS-validation job
+```
+
+## Development
+
+```bash
+uv run pytest        # tests
+uv run mypy          # strict type-checking
+uv run ruff check .  # lint
+uv run ruff format . # format
+```
