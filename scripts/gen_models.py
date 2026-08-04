@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """Regenerate the vendored OCSF Pydantic models for a pinned OCSF version.
 
-We generate a full Pydantic v2 model tree for the Detection Finding class
-(class_uid 2004) and commit the result to ``src/ocsf_emitter/_models.py``.
-Runtime therefore depends only on ``pydantic`` -- no network access or code
-generation at import time.
+We generate a full Pydantic v2 model tree for the set of OCSF classes we
+support (see ``ROOT_CLASSES``) and commit the result to
+``src/ocsf_emitter/_models.py``. Runtime therefore depends only on ``pydantic``
+-- no network access or code generation at import time.
 
 Pipeline:
     1. Fetch the pinned OCSF *metaschema* with ``ocsf-lib`` (works for ANY
        version, unlike the JSON-Schema endpoint which only serves the latest).
-    2. Convert the metaschema for detection_finding (and its transitive object
-       closure) into a self-contained draft JSON Schema. We emit the *base*
-       class only -- attributes tagged with a ``profile`` are dropped, mirroring
-       the schema server's ``?profiles=`` selector, so profile-only fields
-       (cloud, osint, ...) are not forced into the required list.
+    2. Convert each root class (and the *union* of their transitive object
+       closures) into a self-contained draft JSON Schema. Every root class and
+       every shared object becomes a ``$def`` so ``datamodel-code-generator``
+       emits one Pydantic class each, with shared objects deduplicated. We emit
+       the *base* class only -- attributes tagged with a ``profile`` are dropped,
+       mirroring the schema server's ``?profiles=`` selector, so profile-only
+       fields (cloud, osint, ...) are not forced into the required list.
     3. Feed that JSON Schema to ``datamodel-code-generator`` -> Pydantic v2.
 
 Why the pinned version matters: AWS Security Lake custom sources accept OCSF
@@ -35,7 +37,20 @@ from typing import Any
 
 # The version we pin by default. Keep in sync with defaults.OCSF_SCHEMA_VERSION.
 DEFAULT_VERSION = "1.1.0"
-ROOT_CLASS = "detection_finding"
+
+# The OCSF classes we generate models for, by metaschema key. Each becomes a
+# top-level Pydantic model; their shared object closures are deduplicated. Keep
+# in sync with the class registry in ``ocsf_emitter.defaults``.
+ROOT_CLASSES = [
+    "detection_finding",  # 2004 Findings
+    "compliance_finding",  # 2003 Findings
+    "authentication",  # 3002 Identity & Access Management
+    "account_change",  # 3001 Identity & Access Management
+    "patch_state",  # 5004 Discovery (Operating System Patch State)
+    "api_activity",  # 6003 Application Activity
+    "web_resources_activity",  # 6001 Application Activity
+    "file_hosting",  # 6006 Application Activity (File Hosting Activity)
+]
 
 OUT_PATH = Path(__file__).resolve().parent.parent / "src" / "ocsf_emitter" / "_models.py"
 
@@ -117,16 +132,32 @@ def _build_defs(schema: Any, root: str) -> dict[str, dict[str, Any]]:
     return defs
 
 
-def metaschema_to_json_schema(schema: Any, root: str) -> dict[str, Any]:
-    """Produce a self-contained draft JSON Schema for ``root``."""
-    defs = _build_defs(schema, root)
-    root_entry = defs.pop(root)
-    title = (getattr(schema.classes[root], "caption", None) or root).strip()
+def metaschema_to_json_schema(schema: Any, roots: list[str]) -> dict[str, Any]:
+    """Produce a self-contained draft JSON Schema for all ``roots``.
+
+    Every root class and every object in the union of their transitive closures
+    is emitted as a ``$def`` (roots first in declared order, then the shared
+    objects sorted by name for a stable diff). The top-level node is a bare
+    object -- ``datamodel-code-generator`` turns each ``$def`` into its own
+    Pydantic model and produces no wrapper class for the root.
+    """
+    defs: dict[str, dict[str, Any]] = {}
+    for root in roots:
+        # Union the closures; shared objects collide on name and dedup for free.
+        defs.update(_build_defs(schema, root))
+
+    # Stable ordering: roots in declared order, then remaining objects sorted.
+    ordered: dict[str, dict[str, Any]] = {}
+    for root in roots:
+        ordered[root] = defs[root]
+    for name in sorted(k for k in defs if k not in roots):
+        ordered[name] = defs[name]
+
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": title or "Detection Finding",
-        "$defs": defs,
-        **root_entry,
+        "title": "OCSF supported classes",
+        "$defs": ordered,
+        "type": "object",
     }
 
 
@@ -144,7 +175,7 @@ def main() -> int:
             file=sys.stderr,
         )
 
-    json_schema = metaschema_to_json_schema(schema, ROOT_CLASS)
+    json_schema = metaschema_to_json_schema(schema, ROOT_CLASSES)
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tf:
         json.dump(json_schema, tf)
         schema_path = tf.name
@@ -153,8 +184,9 @@ def main() -> int:
         f'"""Generated OCSF models for schema version {version}.\n\n'
         "DO NOT EDIT BY HAND. Regenerate with:\n"
         f"    uv run --extra codegen python scripts/gen_models.py {version}\n\n"
-        f"Source: OCSF {version} metaschema (ocsf-lib), class {ROOT_CLASS} (2004),\n"
-        "converted to JSON Schema (base class, profiles excluded).\n"
+        f"Source: OCSF {version} metaschema (ocsf-lib), classes:\n"
+        + "".join(f"    - {c}\n" for c in ROOT_CLASSES)
+        + "converted to JSON Schema (base classes, profiles excluded).\n"
         '"""\n'
     )
 

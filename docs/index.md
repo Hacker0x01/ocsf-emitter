@@ -1,22 +1,28 @@
 # ocsf-emitter
 
-Construct, validate, and emit **OCSF Detection Finding** events (`class_uid`
-2004) with a consistent shape and mandatory runtime validation.
+Construct, validate, and emit **OCSF 1.1.0** events with a consistent shape and
+mandatory runtime validation. Supports eight classes — Detection Finding (2004),
+Compliance Finding (2003), Authentication (3002), Account Change (3001),
+Operating System Patch State (5004), API Activity (6003), Web Resources Activity
+(6001), and File Hosting Activity (6006).
 
 This is an internal library. Other services import it to turn their own
-detection signals into valid OCSF findings; the library owns the OCSF field
+detection signals into valid OCSF events; the library owns the OCSF field
 names, the schema-version pin, the house defaults, and validation. **Transport
 is deliberately out of scope** — [`emit`][ocsf_emitter.emit.emit] returns a
 validated, JSON-serializable payload and the caller ships it however it likes.
 
 ## Highlights
 
-- **One entry point.** [`build_detection_finding`][ocsf_emitter.builders.build_detection_finding]
-  maps our domain fields onto a typed, valid OCSF `DetectionFinding`.
+- **A builder per class.** [`build_detection_finding`][ocsf_emitter.builders.build_detection_finding],
+  [`build_authentication`][ocsf_emitter.builders.build_authentication],
+  [`build_file_hosting`][ocsf_emitter.builders.build_file_hosting], and more map
+  our domain fields onto typed, valid OCSF models. See the
+  [usage guide](usage.md) for the full class table.
 - **Validation is mandatory.** [`emit`][ocsf_emitter.emit.emit] validates every
-  finding (schema + OCSF invariants) and raises
-  [`InvalidFindingError`][ocsf_emitter.errors.InvalidFindingError] naming the
-  offending field(s).
+  event (schema + OCSF invariants, keyed by the event's own `class_uid`) and
+  raises [`InvalidFindingError`][ocsf_emitter.errors.InvalidFindingError] naming
+  the offending field(s).
 - **Fully typed.** Complete type hints, `mypy --strict` clean, ships `py.typed`.
 - **AWS Security Lake ready.** Pinned to OCSF 1.1.0 and proven against AWS's own
   OCSF validation tool; an optional Parquet writer packages findings for

@@ -1,13 +1,21 @@
 # ocsf-emitter
 
-Construct, validate, and emit **OCSF Detection Finding** events (`class_uid`
-2004) with a consistent shape and mandatory runtime validation.
+Construct, validate, and emit **OCSF 1.1.0** events with a consistent shape and
+mandatory runtime validation. Supports eight classes: Detection Finding (2004),
+Compliance Finding (2003), Authentication (3002), Account Change (3001),
+Operating System Patch State (5004), API Activity (6003), Web Resources Activity
+(6001), and File Hosting Activity (6006).
 
 This is an internal library. Other services import it to turn their own
-detection signals into valid OCSF findings; the library owns the OCSF field
+detection signals into valid OCSF events; the library owns the OCSF field
 names, the schema-version pin, the house defaults, and validation. **Transport
 is deliberately out of scope** -- `emit()` returns a validated,
 JSON-serializable payload and the caller ships it however it likes.
+
+Each class has a builder (`build_detection_finding`, `build_authentication`,
+`build_file_hosting`, …) sharing a common keyword shape; `emit()`/`validate()`
+accept any supported class. See the [usage guide](docs/usage.md) for the full
+class table and examples.
 
 ## Install
 
@@ -67,8 +75,9 @@ also callable standalone via `validate(finding)`. It does two things:
 
 1. **Schema validation** -- re-runs Pydantic validation over the finding's
    current field values (catching any mutation after construction).
-2. **OCSF invariant checks** -- verifies `class_uid == 2004`,
-   `category_uid == 2`, `type_uid == class_uid*100 + activity_id`, and that
+2. **OCSF invariant checks** -- looks the event's class up in the class registry
+   by its `class_uid` and verifies `category_uid`, the `class_name`/
+   `category_name` siblings, `type_uid == class_uid*100 + activity_id`, and that
    `metadata.version` matches the pinned schema version.
 
 On failure it raises `InvalidFindingError`, whose message and `.field_errors`
@@ -92,7 +101,7 @@ schema-generation for two reasons:
 
 - **Exact fidelity to a pinned OCSF version.** The models come straight from
   the OCSF schema for the exact version we pin -- no dependency on a third
-  party's release cadence for `detection_finding` coverage.
+  party's release cadence for class coverage.
 - **Self-contained and auditable.** The generated module is committed and
   reviewable, and regeneration is a single script.
 
@@ -104,11 +113,13 @@ the OCSF JSON Schema HTTP endpoint only serves the *latest* deployed version. So
 
 1. Fetches the pinned version's **metaschema** with `ocsf-lib`
    (`OcsfApiClient().get_schema("1.1.0")`) -- this works for any version.
-2. Converts that metaschema (the `detection_finding` class plus its transitive
-   object closure) into a self-contained draft **JSON Schema**. Attributes
-   tagged with an OCSF `profile` (e.g. `cloud`, `osint`) are dropped so we get
-   the **base** class -- mirroring the schema server's `?profiles=` selector,
-   and keeping profile-only fields out of the required list.
+2. Converts that metaschema (every class in `ROOT_CLASSES` plus the **union** of
+   their transitive object closures) into a self-contained draft **JSON Schema**,
+   where each root class and shared object is a `$def` so codegen emits one
+   Pydantic model each. Attributes tagged with an OCSF `profile` (e.g. `cloud`,
+   `osint`) are dropped so we get the **base** classes -- mirroring the schema
+   server's `?profiles=` selector, and keeping profile-only fields out of the
+   required list.
 3. Feeds that JSON Schema to `datamodel-code-generator` -> Pydantic v2.
 
 ## Bumping the OCSF schema version

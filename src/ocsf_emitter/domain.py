@@ -56,6 +56,109 @@ class MitreAttack:
 
 
 @dataclass(frozen=True, slots=True)
+class UserRef:
+    """A user/principal a finding refers to. Maps to an OCSF ``user`` object.
+
+    Used by the IAM classes (Authentication 3002, Account Change 3001) and,
+    where relevant, other classes. All fields optional -- OCSF ``user`` has no
+    required attributes.
+    """
+
+    name: str | None = None
+    uid: str | None = None
+    email: str | None = None
+    domain: str | None = None
+    full_name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceRef:
+    """A device/host a finding refers to. Maps to an OCSF ``device`` object.
+
+    Used by Operating System Patch State (5004), which additionally constrains
+    "at least one of os.sp_name / os.sp_ver / os.version". Supply ``os_version``
+    (and/or the sp fields) to satisfy it. OCSF ``device`` requires ``type_id``;
+    it defaults to 0 (Unknown) when not given.
+    """
+
+    hostname: str | None = None
+    uid: str | None = None
+    type_id: int = 0
+    os_name: str | None = None
+    os_version: str | None = None
+    os_type_id: int = 0
+    os_sp_name: str | None = None
+    os_sp_ver: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class FileRef:
+    """A file a finding refers to. Maps to an OCSF ``file`` object.
+
+    Used by File Hosting Activity (6006). OCSF ``file`` requires ``name`` and
+    ``type_id`` (1 = Regular File by default).
+    """
+
+    name: str
+    type_id: int = 1
+    mime_type: str | None = None
+    uid: str | None = None
+    path: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ApiCall:
+    """An API operation a finding refers to. Maps to an OCSF ``api`` object.
+
+    Used by API Activity (6003). OCSF ``api`` requires ``operation``.
+    """
+
+    operation: str
+    service: str | None = None
+    version: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class WebResourceRef:
+    """A web resource a finding refers to. Maps to an OCSF ``web_resource`` object.
+
+    Used by Web Resources Activity (6001). All fields optional in OCSF.
+    """
+
+    name: str | None = None
+    type: str | None = None
+    uid: str | None = None
+    url_string: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EndpointRef:
+    """A network endpoint a finding refers to. Maps to an OCSF ``network_endpoint``.
+
+    Used as ``src_endpoint`` by API Activity (6003) and File Hosting (6006). All
+    fields optional in OCSF.
+    """
+
+    ip: str | None = None
+    hostname: str | None = None
+    port: int | None = None
+    uid: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ComplianceRef:
+    """A compliance assessment. Maps to an OCSF ``compliance`` object.
+
+    Used by Compliance Finding (2003). OCSF ``compliance`` requires
+    ``standards`` (a list of standard identifiers, e.g. ``["CIS", "PCI DSS"]``).
+    """
+
+    standards: list[str]
+    control: str | None = None
+    status: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class DetectionSignal:
     """A detection our services produce, in our own terms.
 

@@ -1,5 +1,5 @@
 site_name: ocsf-emitter
-site_description: Construct, validate, and emit OCSF Detection Findings (class_uid 2004)
+site_description: Construct, validate, and emit OCSF 1.1.0 events across supported classes (Detection Finding, Authentication, File Hosting Activity, and more)
 # Update these if the repository lives under a different owner/name.
 site_url: https://hacker0x01.github.io/ocsf-emitter/
 repo_url: https://github.com/Hacker0x01/ocsf-emitter

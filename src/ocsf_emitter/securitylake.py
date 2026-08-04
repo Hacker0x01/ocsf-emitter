@@ -12,6 +12,10 @@ Requirements implemented (per the Security Lake custom-source docs):
     * Records sorted by ``time`` within each object.
     * Partition prefix: ``ext/{source}/region={r}/accountId={a}/eventDay={YYYYMMDD}/``.
 
+Batch **one OCSF class per Parquet object** (one Security Lake source location
+per class). Mixing classes in a single object yields a sparse union of every
+class's columns and defeats Security Lake's per-source OCSF mapping.
+
 This module requires the ``securitylake`` extra (pyarrow):
     uv pip install -e ".[securitylake]"
 """
@@ -22,8 +26,8 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from . import _models as _m
 from .emit import emit
+from .validate import SupportedEvent
 
 try:
     import pyarrow as pa
@@ -62,7 +66,7 @@ def event_day_from_ms(time_ms: int) -> str:
     return datetime.fromtimestamp(time_ms / 1000, tz=UTC).strftime("%Y%m%d")
 
 
-def _validated_payloads(findings: Iterable[_m.DetectionFinding]) -> list[dict[str, object]]:
+def _validated_payloads(findings: Iterable[SupportedEvent]) -> list[dict[str, object]]:
     # emit() validates each finding and returns a JSON-serializable dict.
     payloads = [emit(f) for f in findings]
     # Security Lake asks for records sorted by time within each object.
@@ -70,7 +74,7 @@ def _validated_payloads(findings: Iterable[_m.DetectionFinding]) -> list[dict[st
     return payloads
 
 
-def to_parquet_bytes(findings: Sequence[_m.DetectionFinding]) -> bytes:
+def to_parquet_bytes(findings: Sequence[SupportedEvent]) -> bytes:
     """Validate, sort by time, and serialize findings to a Parquet byte string."""
     if not findings:
         raise ValueError("cannot build a Parquet object from zero findings")
@@ -91,7 +95,7 @@ def to_parquet_bytes(findings: Sequence[_m.DetectionFinding]) -> bytes:
 
 
 def build_parquet_object(
-    findings: Sequence[_m.DetectionFinding],
+    findings: Sequence[SupportedEvent],
     *,
     source_location: str,
     region: str,

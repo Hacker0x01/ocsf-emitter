@@ -7,6 +7,7 @@ OCSF schema version and adjusting our house defaults is a one-file change.
 from __future__ import annotations
 
 import enum
+from dataclasses import dataclass
 
 from . import _models as _m
 
@@ -35,8 +36,92 @@ TYPE_UID_BASE = CLASS_UID * 100
 # OCSF pairs with class_uid/category_uid. AWS Security Lake (and its OCSF
 # validation tool) expect category_name to be present and class_name, if set, to
 # match the class. Values are fixed by the OCSF 2004 spec.
+#
+# These module-level constants are retained for backward compatibility and refer
+# to the Detection Finding class; the multi-class machinery below derives the
+# same values from the class registry.
 CLASS_NAME = "Detection Finding"
 CATEGORY_NAME = "Findings"
+
+
+# --------------------------------------------------------------------------- #
+# Supported OCSF classes and their identity registry.
+#
+# The library builds/validates/emits each class below. Every class's identity
+# (class_uid, category_uid, and the sibling name fields) lives here so adding a
+# class is a registry entry plus a builder. Keep ``ROOT_CLASSES`` in
+# ``scripts/gen_models.py`` in sync with the keys here.
+# --------------------------------------------------------------------------- #
+class OcsfClass(enum.Enum):
+    """The OCSF classes this library supports, keyed by metaschema name."""
+
+    DETECTION_FINDING = "detection_finding"
+    COMPLIANCE_FINDING = "compliance_finding"
+    AUTHENTICATION = "authentication"
+    ACCOUNT_CHANGE = "account_change"
+    PATCH_STATE = "patch_state"
+    API_ACTIVITY = "api_activity"
+    WEB_RESOURCES_ACTIVITY = "web_resources_activity"
+    FILE_HOSTING = "file_hosting"
+
+
+@dataclass(frozen=True, slots=True)
+class ClassSpec:
+    """Fixed OCSF identity for one class (uids + sibling name fields)."""
+
+    ocsf_class: OcsfClass
+    class_uid: int
+    category_uid: int
+    class_name: str
+    category_name: str
+
+    def type_uid(self, activity_id_value: int) -> int:
+        """OCSF ``type_uid`` = class_uid * 100 + activity_id."""
+        return self.class_uid * 100 + activity_id_value
+
+
+# Category name siblings, per the OCSF 1.1.0 categories:
+#   Findings (2), Identity & Access Management (3), Discovery (5),
+#   Application Activity (6).
+_CLASS_REGISTRY: dict[OcsfClass, ClassSpec] = {
+    OcsfClass.DETECTION_FINDING: ClassSpec(
+        OcsfClass.DETECTION_FINDING, 2004, 2, "Detection Finding", "Findings"
+    ),
+    OcsfClass.COMPLIANCE_FINDING: ClassSpec(
+        OcsfClass.COMPLIANCE_FINDING, 2003, 2, "Compliance Finding", "Findings"
+    ),
+    OcsfClass.AUTHENTICATION: ClassSpec(
+        OcsfClass.AUTHENTICATION, 3002, 3, "Authentication", "Identity & Access Management"
+    ),
+    OcsfClass.ACCOUNT_CHANGE: ClassSpec(
+        OcsfClass.ACCOUNT_CHANGE, 3001, 3, "Account Change", "Identity & Access Management"
+    ),
+    OcsfClass.PATCH_STATE: ClassSpec(
+        OcsfClass.PATCH_STATE, 5004, 5, "Operating System Patch State", "Discovery"
+    ),
+    OcsfClass.API_ACTIVITY: ClassSpec(
+        OcsfClass.API_ACTIVITY, 6003, 6, "API Activity", "Application Activity"
+    ),
+    OcsfClass.WEB_RESOURCES_ACTIVITY: ClassSpec(
+        OcsfClass.WEB_RESOURCES_ACTIVITY, 6001, 6, "Web Resources Activity", "Application Activity"
+    ),
+    OcsfClass.FILE_HOSTING: ClassSpec(
+        OcsfClass.FILE_HOSTING, 6006, 6, "File Hosting Activity", "Application Activity"
+    ),
+}
+
+# Reverse index for validation (look a finding's class up by its class_uid int).
+_CLASS_BY_UID: dict[int, ClassSpec] = {spec.class_uid: spec for spec in _CLASS_REGISTRY.values()}
+
+
+def class_spec(ocsf_class: OcsfClass) -> ClassSpec:
+    """Return the :class:`ClassSpec` for a supported OCSF class."""
+    return _CLASS_REGISTRY[ocsf_class]
+
+
+def class_spec_by_uid(class_uid_value: int) -> ClassSpec | None:
+    """Return the :class:`ClassSpec` for a ``class_uid`` int, or None if unsupported."""
+    return _CLASS_BY_UID.get(class_uid_value)
 
 
 # --------------------------------------------------------------------------- #
@@ -122,12 +207,110 @@ class Status(enum.Enum):
 
 
 class Activity(enum.Enum):
-    """Our finding activity vocabulary. Maps to OCSF activity_id."""
+    """Our finding activity vocabulary (Findings classes). Maps to OCSF activity_id.
+
+    Shared by Detection Finding (2004) and Compliance Finding (2003), whose
+    activity_id enums are identical: 1 Create, 2 Update, 3 Close.
+    """
 
     UNKNOWN = "unknown"
     CREATE = "create"
     UPDATE = "update"
     CLOSE = "close"
+
+
+# Per-class action enums for the non-Findings classes. Each is an IntEnum whose
+# *value is the OCSF activity_id*, so no name->id table is needed: pass the
+# member straight into the builder and its ``.value`` becomes activity_id (and
+# feeds type_uid). Named ``...Action`` (not ``Activity``) to avoid clashing with
+# the generated model class names (ApiActivity, WebResourcesActivity, ...).
+# Values are fixed by the OCSF 1.1.0 spec for each class.
+class AuthAction(enum.IntEnum):
+    """Authentication (3002) activity_id."""
+
+    UNKNOWN = 0
+    LOGON = 1
+    LOGOFF = 2
+    AUTHENTICATION_TICKET = 3
+    SERVICE_TICKET_REQUEST = 4
+    SERVICE_TICKET_RENEW = 5
+    OTHER = 99
+
+
+class AccountChangeAction(enum.IntEnum):
+    """Account Change (3001) activity_id."""
+
+    UNKNOWN = 0
+    CREATE = 1
+    ENABLE = 2
+    PASSWORD_CHANGE = 3
+    PASSWORD_RESET = 4
+    DISABLE = 5
+    DELETE = 6
+    ATTACH_POLICY = 7
+    DETACH_POLICY = 8
+    LOCK = 9
+    MFA_FACTOR_ENABLE = 10
+    MFA_FACTOR_DISABLE = 11
+    OTHER = 99
+
+
+class PatchStateAction(enum.IntEnum):
+    """Operating System Patch State (5004) activity_id."""
+
+    UNKNOWN = 0
+    LOG = 1
+    COLLECT = 2
+    OTHER = 99
+
+
+class ApiAction(enum.IntEnum):
+    """API Activity (6003) activity_id."""
+
+    UNKNOWN = 0
+    CREATE = 1
+    READ = 2
+    UPDATE = 3
+    DELETE = 4
+    OTHER = 99
+
+
+class WebResourceAction(enum.IntEnum):
+    """Web Resources Activity (6001) activity_id."""
+
+    UNKNOWN = 0
+    CREATE = 1
+    READ = 2
+    UPDATE = 3
+    DELETE = 4
+    SEARCH = 5
+    IMPORT = 6
+    EXPORT = 7
+    SHARE = 8
+    OTHER = 99
+
+
+class FileHostingAction(enum.IntEnum):
+    """File Hosting Activity (6006) activity_id."""
+
+    UNKNOWN = 0
+    UPLOAD = 1
+    DOWNLOAD = 2
+    UPDATE = 3
+    DELETE = 4
+    RENAME = 5
+    COPY = 6
+    MOVE = 7
+    RESTORE = 8
+    PREVIEW = 9
+    LOCK = 10
+    UNLOCK = 11
+    SHARE = 12
+    UNSHARE = 13
+    OPEN = 14
+    SYNC = 15
+    UNSYNC = 16
+    OTHER = 99
 
 
 class Confidence(enum.Enum):
@@ -239,3 +422,27 @@ def type_uid(activity: Activity) -> _m.TypeUid:
 def type_uid_int(activity: Activity) -> int:
     """Return the integer type_uid value (for invariant checks/logging)."""
     return TYPE_UID_BASE + _ACTIVITY_TO_ID[activity]
+
+
+# --------------------------------------------------------------------------- #
+# Generic, class-agnostic identity helpers.
+#
+# The generated model uses a *distinct* IntEnum type per class (ClassUid,
+# ClassUid1, ...), so there is no single shared enum to target. These helpers
+# return plain ints; Pydantic coerces them into whichever per-class enum the
+# target model field expects. This is what the multi-class builders use.
+# --------------------------------------------------------------------------- #
+def class_identity(ocsf_class: OcsfClass) -> tuple[int, int, str, str]:
+    """Return ``(class_uid, category_uid, class_name, category_name)`` for a class."""
+    spec = _CLASS_REGISTRY[ocsf_class]
+    return spec.class_uid, spec.category_uid, spec.class_name, spec.category_name
+
+
+def type_uid_for(ocsf_class: OcsfClass, activity_id_value: int) -> int:
+    """Compute ``type_uid = class_uid * 100 + activity_id`` for a class."""
+    return _CLASS_REGISTRY[ocsf_class].type_uid(activity_id_value)
+
+
+def activity_id_int(activity: Activity) -> int:
+    """Return the integer OCSF activity_id for a shared Findings ``Activity``."""
+    return _ACTIVITY_TO_ID[activity]
