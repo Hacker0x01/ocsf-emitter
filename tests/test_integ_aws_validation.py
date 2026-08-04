@@ -152,7 +152,8 @@ def _all_class_payloads() -> dict[str, dict[str, object]]:
             build_file_hosting(
                 file=FileRef(name="secret.pdf", mime_type="application/pdf"),
                 src_endpoint=EndpointRef(ip="198.51.100.9"),
-                actor_user=UserRef(email="a@example.com"),
+                # OCSF `user` requires anyOf(name|uid|account); supply a name.
+                actor_user=UserRef(name="alice", email="a@example.com"),
                 severity=sev,
                 product=product,
                 time_ms=when,
@@ -186,7 +187,44 @@ def test_emitted_finding_is_valid_per_aws_tool(tmp_path: Path) -> None:
     _run_validator(target)
 
 
-@pytest.mark.parametrize("class_name", list(_all_class_payloads()))
+# Two classes fail the pinned AWS validator (commit 3811c95e, the latest as of
+# 2025-02) through bugs *in the tool*, not in our output -- confirmed by fetching
+# the same live schema the tool uses and running jsonschema directly:
+#
+#   * patch_state (5004): the tool's hardcoded ocsf_class_dictionary maps 5004 to
+#     class_name "Device Config State Change". Real OCSF 1.1.0 names 5004
+#     "Operating System Patch State" (5019 is "Device Config State Change"); the
+#     tool copied the wrong name into the 5004 row, so its sibling check exits.
+#   * api_activity (6003): the schema the tool fetches from
+#     schema.ocsf.io/schema/1.1.0/classes/api_activity omits the `api` property
+#     entirely, yet `api` is a required base attribute per the OCSF metaschema and
+#     the class docs. With additionalProperties=False, our (correct) `api` field
+#     is rejected as unexpected.
+#
+# We emit spec-correct OCSF for both, so we xfail rather than distort the output.
+# strict=True flips these to a hard failure if a future tool bump fixes them --
+# the signal to remove this marker. AWS Security Lake custom sources have
+# historically mapped only detection_finding anyway.
+_AWS_TOOL_BROKEN_CLASSES = {"patch_state", "api_activity"}
+
+
+def _class_param(class_name: str) -> object:
+    if class_name in _AWS_TOOL_BROKEN_CLASSES:
+        return pytest.param(
+            class_name,
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason=(
+                    "Pinned AWS validation tool (3811c95e) is wrong for this class: "
+                    "5004 has the wrong class_name in its table / 6003's served schema "
+                    "omits the required `api` field. Our OCSF output is correct."
+                ),
+            ),
+        )
+    return class_name
+
+
+@pytest.mark.parametrize("class_name", [_class_param(name) for name in _all_class_payloads()])
 def test_every_class_is_valid_per_aws_tool(class_name: str, tmp_path: Path) -> None:
     target = tmp_path / "records"
     target.mkdir()
