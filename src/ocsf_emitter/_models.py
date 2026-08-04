@@ -3,15 +3,27 @@
 DO NOT EDIT BY HAND. Regenerate with:
     uv run --extra codegen python scripts/gen_models.py 1.1.0
 
-Source: OCSF 1.1.0 metaschema (ocsf-lib), class detection_finding (2004),
-converted to JSON Schema (base class, profiles excluded).
+Source: OCSF 1.1.0 metaschema (ocsf-lib), classes:
+    - detection_finding
+    - compliance_finding
+    - authentication
+    - account_change
+    - patch_state
+    - api_activity
+    - web_resources_activity
+    - file_hosting
+converted to JSON Schema (base classes, profiles excluded).
 """
 
 from __future__ import annotations
 
+from pydantic import BaseModel, ConfigDict, Field
 from enum import IntEnum
 from typing import Any
-from pydantic import BaseModel, ConfigDict, Field
+
+
+class OcsfSupportedClasses(BaseModel):
+    pass
 
 
 class ClassUid(IntEnum):
@@ -83,54 +95,245 @@ class ConfidenceId(IntEnum):
     integer_99 = 99
 
 
-class Enrichment(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    data: Any
-    name: str
-    type: str | None = None
-    value: str
-    provider: str | None = None
+class ClassUid1(IntEnum):
+    integer_2003 = 2003
 
 
-class Group(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    type: str | None = None
-    domain: str | None = None
-    desc: str | None = None
-    uid: str | None = None
-    privileges: list[str] | None = None
+class TypeUid1(IntEnum):
+    integer_200300 = 200300
+    integer_200301 = 200301
+    integer_200302 = 200302
+    integer_200303 = 200303
+    integer_200399 = 200399
 
 
-class TypeId(IntEnum):
+class LogonTypeId(IntEnum):
+    integer_0 = 0
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_7 = 7
+    integer_8 = 8
+    integer_9 = 9
+    integer_10 = 10
+    integer_11 = 11
+    integer_12 = 12
+    integer_13 = 13
+    integer_99 = 99
+
+
+class ClassUid2(IntEnum):
+    integer_3002 = 3002
+
+
+class ActivityId2(IntEnum):
     integer_0 = 0
     integer_1 = 1
     integer_2 = 2
     integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
     integer_99 = 99
 
 
-class Location(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    desc: str | None = None
-    city: str | None = None
-    country: str | None = None
-    coordinates: list[float] | None = None
-    continent: str | None = None
-    is_on_premises: bool | None = None
-    isp: str | None = None
-    postal_code: str | None = None
-    provider: str | None = None
-    region: str | None = None
+class CategoryUid2(IntEnum):
+    integer_3 = 3
 
 
-class TypeId1(IntEnum):
+class TypeUid2(IntEnum):
+    integer_300200 = 300200
+    integer_300201 = 300201
+    integer_300202 = 300202
+    integer_300203 = 300203
+    integer_300204 = 300204
+    integer_300205 = 300205
+    integer_300299 = 300299
+
+
+class StatusId2(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_99 = 99
+
+
+class AuthProtocolId(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_6 = 6
+    integer_7 = 7
+    integer_8 = 8
+    integer_9 = 9
+    integer_10 = 10
+    integer_99 = 99
+
+
+class ClassUid3(IntEnum):
+    integer_3001 = 3001
+
+
+class ActivityId3(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_6 = 6
+    integer_7 = 7
+    integer_8 = 8
+    integer_9 = 9
+    integer_10 = 10
+    integer_11 = 11
+    integer_99 = 99
+
+
+class TypeUid3(IntEnum):
+    integer_300100 = 300100
+    integer_300101 = 300101
+    integer_300102 = 300102
+    integer_300103 = 300103
+    integer_300104 = 300104
+    integer_300105 = 300105
+    integer_300106 = 300106
+    integer_300107 = 300107
+    integer_300108 = 300108
+    integer_300109 = 300109
+    integer_300110 = 300110
+    integer_300111 = 300111
+    integer_300199 = 300199
+
+
+class ClassUid4(IntEnum):
+    integer_5004 = 5004
+
+
+class ActivityId4(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_99 = 99
+
+
+class CategoryUid4(IntEnum):
+    integer_5 = 5
+
+
+class TypeUid4(IntEnum):
+    integer_500400 = 500400
+    integer_500401 = 500401
+    integer_500402 = 500402
+    integer_500499 = 500499
+
+
+class ClassUid5(IntEnum):
+    integer_6003 = 6003
+
+
+class ActivityId5(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_99 = 99
+
+
+class CategoryUid5(IntEnum):
+    integer_6 = 6
+
+
+class TypeUid5(IntEnum):
+    integer_600300 = 600300
+    integer_600301 = 600301
+    integer_600302 = 600302
+    integer_600303 = 600303
+    integer_600304 = 600304
+    integer_600399 = 600399
+
+
+class ClassUid6(IntEnum):
+    integer_6001 = 6001
+
+
+class ActivityId6(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_6 = 6
+    integer_7 = 7
+    integer_8 = 8
+    integer_99 = 99
+
+
+class TypeUid6(IntEnum):
+    integer_600100 = 600100
+    integer_600101 = 600101
+    integer_600102 = 600102
+    integer_600103 = 600103
+    integer_600104 = 600104
+    integer_600105 = 600105
+    integer_600106 = 600106
+    integer_600107 = 600107
+    integer_600108 = 600108
+    integer_600199 = 600199
+
+
+class ClassUid7(IntEnum):
+    integer_6006 = 6006
+
+
+class ActivityId7(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_6 = 6
+    integer_7 = 7
+    integer_8 = 8
+    integer_9 = 9
+    integer_10 = 10
+    integer_11 = 11
+    integer_12 = 12
+    integer_13 = 13
+    integer_14 = 14
+    integer_15 = 15
+    integer_16 = 16
+    integer_99 = 99
+
+
+class TypeUid7(IntEnum):
+    integer_600600 = 600600
+    integer_600601 = 600601
+    integer_600602 = 600602
+    integer_600603 = 600603
+    integer_600604 = 600604
+    integer_600605 = 600605
+    integer_600606 = 600606
+    integer_600607 = 600607
+    integer_600608 = 600608
+    integer_600609 = 600609
+    integer_600610 = 600610
+    integer_600611 = 600611
+    integer_600612 = 600612
+    integer_600613 = 600613
+    integer_600614 = 600614
+    integer_600615 = 600615
+    integer_600616 = 600616
+    integer_600699 = 600699
+
+
+class TypeId(IntEnum):
     integer_0 = 0
     integer_1 = 1
     integer_2 = 2
@@ -152,17 +355,60 @@ class Account(BaseModel):
     name: str | None = None
     type: str | None = None
     uid: str | None = None
-    type_id: TypeId1 | None = None
+    type_id: TypeId | None = None
 
 
-class Organization(BaseModel):
+class TypeId1(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_99 = 99
+
+
+class Analytic(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
     name: str | None = None
+    type: str | None = None
+    version: str | None = None
+    desc: str | None = None
     uid: str | None = None
-    ou_name: str | None = None
-    ou_uid: str | None = None
+    category: str | None = None
+    type_id: TypeId1
+    related_analytics: list[Analytic] | None = None
+
+
+class StatusId8(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_99 = 99
+
+
+class Compliance(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    control: str | None = None
+    status: str | None = None
+    requirements: list[str] | None = None
+    standards: list[str]
+    status_code: str | None = None
+    status_detail: str | None = None
+    status_id: StatusId8 | None = None
+
+
+class Cwe(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    uid: str
+    caption: str | None = None
+    src_url: str | None = None
 
 
 class TypeId2(IntEnum):
@@ -181,15 +427,13 @@ class TypeId2(IntEnum):
     integer_99 = 99
 
 
-class KeyboardInfo(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    function_keys: int | None = None
-    ime: str | None = None
-    keyboard_layout: str | None = None
-    keyboard_subtype: int | None = None
-    keyboard_type: str | None = None
+class AlgorithmId(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_99 = 99
 
 
 class Display(BaseModel):
@@ -203,78 +447,7 @@ class Display(BaseModel):
     scale_factor: int | None = None
 
 
-class TypeId4(IntEnum):
-    integer_0 = 0
-    integer_99 = 99
-    integer_100 = 100
-    integer_101 = 101
-    integer_200 = 200
-    integer_201 = 201
-    integer_300 = 300
-    integer_301 = 301
-    integer_302 = 302
-    integer_400 = 400
-    integer_401 = 401
-    integer_402 = 402
-
-
-class Os(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str
-    type: str | None = None
-    version: str | None = None
-    build: str | None = None
-    country: str | None = None
-    type_id: TypeId4
-    lang: str | None = None
-    cpe_name: str | None = None
-    cpu_bits: int | None = None
-    edition: str | None = None
-    sp_name: str | None = None
-    sp_ver: int | None = None
-
-
-class Idp(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    uid: str | None = None
-
-
-class Policy(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    version: str | None = None
-    group: Group | None = None
-    desc: str | None = None
-    uid: str | None = None
-
-
-class Session(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    count: int | None = None
-    terminal: str | None = None
-    uid: str | None = None
-    uuid: str | None = None
-    issuer: str | None = None
-    created_time: int | None = None
-    credential_uid: str | None = None
-    expiration_reason: str | None = None
-    expiration_time: int | None = None
-    is_mfa: bool | None = None
-    is_remote: bool | None = None
-    is_vpn: bool | None = None
-    uid_alt: str | None = None
-
-
-class IntegrityId(IntEnum):
+class OpcodeId(IntEnum):
     integer_0 = 0
     integer_1 = 1
     integer_2 = 2
@@ -282,16 +455,60 @@ class IntegrityId(IntEnum):
     integer_4 = 4
     integer_5 = 5
     integer_6 = 6
-    integer_99 = 99
 
 
-class Object(BaseModel):
+class DnsQuery(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
+    type: str | None = None
+    hostname: str
+    class_: str | None = Field(None, alias='class')
+    opcode: str | None = None
+    opcode_id: OpcodeId | None = None
+    packet_uid: int | None = None
 
 
-class TypeId5(IntEnum):
+class Enrichment(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Any
+    name: str
+    type: str | None = None
+    value: str
+    provider: str | None = None
+
+
+class Epss(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    version: str | None = None
+    created_time: int | None = None
+    percentile: float | None = None
+    score: str
+
+
+class Extension(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str
+    version: str
+    uid: str
+
+
+class Feature(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str | None = None
+    version: str | None = None
+    uid: str | None = None
+
+
+class TypeId3(IntEnum):
     integer_0 = 0
     integer_1 = 1
     integer_2 = 2
@@ -312,7 +529,7 @@ class ConfidentialityId(IntEnum):
     integer_99 = 99
 
 
-class AlgorithmId(IntEnum):
+class AlgorithmId1(IntEnum):
     integer_0 = 0
     integer_1 = 1
     integer_2 = 2
@@ -330,39 +547,48 @@ class Fingerprint(BaseModel):
     )
     value: str
     algorithm: str | None = None
-    algorithm_id: AlgorithmId
+    algorithm_id: AlgorithmId1
 
 
-class Feature(BaseModel):
+class Group(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
     name: str | None = None
-    version: str | None = None
+    type: str | None = None
+    domain: str | None = None
+    desc: str | None = None
     uid: str | None = None
+    privileges: list[str] | None = None
 
 
-class AlgorithmId1(IntEnum):
-    integer_0 = 0
-    integer_1 = 1
-    integer_2 = 2
-    integer_3 = 3
-    integer_4 = 4
-    integer_99 = 99
-
-
-class Certificate(BaseModel):
+class HttpHeader(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    version: str | None = None
+    name: str
+    value: str
+
+
+class HttpResponse(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    code: int
+    message: str | None = None
+    status: str | None = None
+    length: int | None = None
+    content_type: str | None = None
+    http_headers: list[HttpHeader] | None = None
+    latency: int | None = None
+
+
+class Idp(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str | None = None
     uid: str | None = None
-    subject: str | None = None
-    issuer: str
-    fingerprints: list[Fingerprint]
-    created_time: int | None = None
-    expiration_time: int | None = None
-    serial_number: str
 
 
 class Image(BaseModel):
@@ -376,14 +602,59 @@ class Image(BaseModel):
     labels: list[str] | None = None
 
 
-class Service(BaseModel):
+class KeyboardInfo(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    name: str | None = None
-    version: str | None = None
-    uid: str | None = None
-    labels: list[str] | None = None
+    function_keys: int | None = None
+    ime: str | None = None
+    keyboard_layout: str | None = None
+    keyboard_subtype: int | None = None
+    keyboard_type: str | None = None
+
+
+class PhaseId(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_6 = 6
+    integer_7 = 7
+    integer_99 = 99
+
+
+class KillChainPhase(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    phase: str | None = None
+    phase_id: PhaseId
+
+
+class Location(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    desc: str | None = None
+    city: str | None = None
+    country: str | None = None
+    coordinates: list[float] | None = None
+    continent: str | None = None
+    is_on_premises: bool | None = None
+    isp: str | None = None
+    postal_code: str | None = None
+    provider: str | None = None
+    region: str | None = None
+
+
+class Metric(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str
+    value: str
 
 
 class BoundaryId(IntEnum):
@@ -417,46 +688,7 @@ class ProtocolVerId(IntEnum):
     integer_99 = 99
 
 
-class NetworkConnectionInfo(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    session: Session | None = None
-    uid: str | None = None
-    boundary: str | None = None
-    protocol_name: str | None = None
-    direction: str | None = None
-    boundary_id: BoundaryId | None = None
-    direction_id: DirectionId
-    protocol_num: int | None = None
-    protocol_ver: str | None = None
-    protocol_ver_id: ProtocolVerId | None = None
-    tcp_flags: int | None = None
-
-
-class OpcodeId(IntEnum):
-    integer_0 = 0
-    integer_1 = 1
-    integer_2 = 2
-    integer_3 = 3
-    integer_4 = 4
-    integer_5 = 5
-    integer_6 = 6
-
-
-class DnsQuery(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    type: str | None = None
-    class_: str | None = Field(None, alias='class')
-    opcode: str | None = None
-    hostname: str
-    opcode_id: OpcodeId | None = None
-    packet_uid: int | None = None
-
-
-class PhaseId(IntEnum):
+class TypeId4(IntEnum):
     integer_0 = 0
     integer_1 = 1
     integer_2 = 2
@@ -465,45 +697,60 @@ class PhaseId(IntEnum):
     integer_5 = 5
     integer_6 = 6
     integer_7 = 7
+    integer_8 = 8
+    integer_9 = 9
+    integer_10 = 10
+    integer_11 = 11
     integer_99 = 99
 
 
-class KillChainPhase(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    phase: str | None = None
-    phase_id: PhaseId
+class TypeId5(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_99 = 99
 
 
-class Tactic(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    uid: str | None = None
-    src_url: str | None = None
-
-
-class SubTechnique(BaseModel):
+class NetworkInterface(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
     name: str | None = None
+    type: str | None = None
+    ip: str | None = None
+    hostname: str | None = None
     uid: str | None = None
-    src_url: str | None = None
-
-
-class Technique(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    uid: str | None = None
-    src_url: str | None = None
+    mac: str | None = None
+    namespace: str | None = None
+    type_id: TypeId5
+    subnet_prefix: int | None = None
 
 
 class TypeId6(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_6 = 6
+    integer_7 = 7
+    integer_8 = 8
+    integer_9 = 9
+    integer_10 = 10
+    integer_11 = 11
+    integer_99 = 99
+
+
+class Object(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class TypeId7(IntEnum):
     integer_0 = 0
     integer_1 = 1
     integer_2 = 2
@@ -527,6 +774,99 @@ class TypeId6(IntEnum):
     integer_29 = 29
     integer_30 = 30
     integer_99 = 99
+
+
+class Organization(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str | None = None
+    uid: str | None = None
+    ou_name: str | None = None
+    ou_uid: str | None = None
+
+
+class TypeId8(IntEnum):
+    integer_0 = 0
+    integer_99 = 99
+    integer_100 = 100
+    integer_101 = 101
+    integer_200 = 200
+    integer_201 = 201
+    integer_300 = 300
+    integer_301 = 301
+    integer_302 = 302
+    integer_400 = 400
+    integer_401 = 401
+    integer_402 = 402
+
+
+class Os(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str
+    type: str | None = None
+    version: str | None = None
+    build: str | None = None
+    country: str | None = None
+    type_id: TypeId8
+    lang: str | None = None
+    cpe_name: str | None = None
+    cpu_bits: int | None = None
+    edition: str | None = None
+    sp_name: str | None = None
+    sp_ver: int | None = None
+
+
+class Package(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str
+    version: str
+    release: str | None = None
+    epoch: int | None = None
+    license: str | None = None
+    architecture: str | None = None
+    purl: str | None = None
+
+
+class Policy(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str | None = None
+    version: str | None = None
+    group: Group | None = None
+    desc: str | None = None
+    uid: str | None = None
+
+
+class IntegrityId(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_6 = 6
+    integer_99 = 99
+
+
+class Product(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str | None = None
+    version: str | None = None
+    path: str | None = None
+    uid: str | None = None
+    feature: Feature | None = None
+    lang: str | None = None
+    cpe_name: str | None = None
+    url_string: str | None = None
+    vendor_name: str
 
 
 class ScoreId(IntEnum):
@@ -554,116 +894,292 @@ class Reputation(BaseModel):
     score_id: ScoreId
 
 
-class TypeId7(IntEnum):
-    integer_0 = 0
-    integer_1 = 1
-    integer_2 = 2
-    integer_3 = 3
-    integer_4 = 4
-    integer_99 = 99
+class San(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str
+    type: str
 
 
-class Analytic(BaseModel):
+class Service(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
     name: str | None = None
-    type: str | None = None
     version: str | None = None
-    desc: str | None = None
     uid: str | None = None
-    category: str | None = None
-    type_id: TypeId7
-    related_analytics: list[Analytic] | None = None
+    labels: list[str] | None = None
 
 
-class Package(BaseModel):
+class Session(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    name: str
-    version: str
-    release: str | None = None
-    epoch: int | None = None
-    license: str | None = None
-    architecture: str | None = None
-    purl: str | None = None
+    count: int | None = None
+    terminal: str | None = None
+    uid: str | None = None
+    uuid: str | None = None
+    issuer: str | None = None
+    created_time: int | None = None
+    credential_uid: str | None = None
+    expiration_reason: str | None = None
+    expiration_time: int | None = None
+    is_mfa: bool | None = None
+    is_remote: bool | None = None
+    is_vpn: bool | None = None
+    uid_alt: str | None = None
 
 
-class Cwe(BaseModel):
+class SubTechnique(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    uid: str
-    caption: str | None = None
+    name: str | None = None
+    uid: str | None = None
     src_url: str | None = None
 
 
-class Epss(BaseModel):
+class Tactic(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    version: str | None = None
-    created_time: int | None = None
-    percentile: float | None = None
-    score: str
+    name: str | None = None
+    uid: str | None = None
+    src_url: str | None = None
 
 
-class Metric(BaseModel):
+class Technique(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    name: str
-    value: str
-
-
-class TypeId8(IntEnum):
-    integer_0 = 0
-    integer_1 = 1
-    integer_2 = 2
-    integer_3 = 3
-    integer_4 = 4
-    integer_5 = 5
-    integer_6 = 6
-    integer_7 = 7
-    integer_8 = 8
-    integer_9 = 9
-    integer_10 = 10
-    integer_11 = 11
-    integer_99 = 99
+    name: str | None = None
+    uid: str | None = None
+    src_url: str | None = None
 
 
 class TypeId9(IntEnum):
     integer_0 = 0
     integer_1 = 1
-    integer_2 = 2
-    integer_3 = 3
-    integer_4 = 4
+    integer_5 = 5
+    integer_10 = 10
+    integer_13 = 13
+    integer_14 = 14
+    integer_15 = 15
+    integer_16 = 16
+    integer_18 = 18
+    integer_19 = 19
+    integer_20 = 20
+    integer_21 = 21
+    integer_41 = 41
+    integer_42 = 42
+    integer_43 = 43
+    integer_44 = 44
+    integer_45 = 45
+    integer_47 = 47
+    integer_48 = 48
+    integer_49 = 49
+    integer_50 = 50
+    integer_51 = 51
     integer_99 = 99
 
 
-class NetworkInterface(BaseModel):
+class TlsExtension(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Any | None = None
+    type: str | None = None
+    type_id: TypeId9
+
+
+class CategoryId(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_3 = 3
+    integer_4 = 4
+    integer_5 = 5
+    integer_6 = 6
+    integer_7 = 7
+    integer_9 = 9
+    integer_11 = 11
+    integer_14 = 14
+    integer_15 = 15
+    integer_16 = 16
+    integer_17 = 17
+    integer_18 = 18
+    integer_20 = 20
+    integer_21 = 21
+    integer_22 = 22
+    integer_23 = 23
+    integer_24 = 24
+    integer_25 = 25
+    integer_26 = 26
+    integer_27 = 27
+    integer_29 = 29
+    integer_30 = 30
+    integer_31 = 31
+    integer_32 = 32
+    integer_33 = 33
+    integer_34 = 34
+    integer_35 = 35
+    integer_36 = 36
+    integer_37 = 37
+    integer_38 = 38
+    integer_40 = 40
+    integer_43 = 43
+    integer_44 = 44
+    integer_45 = 45
+    integer_46 = 46
+    integer_47 = 47
+    integer_49 = 49
+    integer_50 = 50
+    integer_51 = 51
+    integer_52 = 52
+    integer_53 = 53
+    integer_54 = 54
+    integer_55 = 55
+    integer_56 = 56
+    integer_57 = 57
+    integer_58 = 58
+    integer_59 = 59
+    integer_60 = 60
+    integer_61 = 61
+    integer_63 = 63
+    integer_64 = 64
+    integer_65 = 65
+    integer_66 = 66
+    integer_67 = 67
+    integer_68 = 68
+    integer_71 = 71
+    integer_83 = 83
+    integer_84 = 84
+    integer_85 = 85
+    integer_86 = 86
+    integer_87 = 87
+    integer_88 = 88
+    integer_89 = 89
+    integer_90 = 90
+    integer_92 = 92
+    integer_93 = 93
+    integer_95 = 95
+    integer_96 = 96
+    integer_97 = 97
+    integer_98 = 98
+    integer_99 = 99
+    integer_101 = 101
+    integer_102 = 102
+    integer_103 = 103
+    integer_106 = 106
+    integer_107 = 107
+    integer_108 = 108
+    integer_109 = 109
+    integer_110 = 110
+    integer_111 = 111
+    integer_112 = 112
+    integer_113 = 113
+    integer_114 = 114
+    integer_118 = 118
+    integer_121 = 121
+
+
+class Url(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    port: int | None = None
+    scheme: str | None = None
+    path: str | None = None
+    hostname: str | None = None
+    query_string: str | None = None
+    categories: list[str] | None = None
+    category_ids: list[CategoryId] | None = None
+    resource_type: str | None = None
+    subdomain: str | None = None
+    url_string: str | None = None
+
+
+class TypeId10(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
+    integer_2 = 2
+    integer_3 = 3
+    integer_99 = 99
+
+
+class WebResource(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Any | None = None
+    name: str | None = None
+    type: str | None = None
+    desc: str | None = None
+    uid: str | None = None
+    labels: list[str] | None = None
+    url_string: str | None = None
+
+
+class Attack(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    version: str | None = None
+    tactics: list[Tactic] | None = None
+    technique: Technique | None = None
+    sub_technique: SubTechnique | None = None
+    tactic: Tactic | None = None
+
+
+class Authorization(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    decision: str | None = None
+    policy: Policy | None = None
+
+
+class Certificate(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    version: str | None = None
+    uid: str | None = None
+    subject: str | None = None
+    issuer: str
+    fingerprints: list[Fingerprint]
+    created_time: int | None = None
+    expiration_time: int | None = None
+    serial_number: str
+
+
+class Container(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
     name: str | None = None
-    type: str | None = None
-    ip: str | None = None
+    runtime: str | None = None
+    size: int | None = None
+    tag: str | None = None
     uid: str | None = None
-    mac: str | None = None
-    hostname: str | None = None
-    namespace: str | None = None
-    type_id: TypeId9
-    subnet_prefix: int | None = None
+    image: Image | None = None
+    hash: Fingerprint | None = None
+    network_driver: str | None = None
+    orchestrator: str | None = None
+    pod_uuid: str | None = None
 
 
-class Extension(BaseModel):
+class Cvss(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    name: str
     version: str
-    uid: str
+    depth: str | None = None
+    severity: str | None = None
+    metrics: list[Metric] | None = None
+    base_score: float
+    overall_score: float | None = None
+    vector_string: str | None = None
 
 
 class DeviceHwInfo(BaseModel):
@@ -685,29 +1201,6 @@ class DeviceHwInfo(BaseModel):
     serial_number: str | None = None
 
 
-class Authorization(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    decision: str | None = None
-    policy: Policy | None = None
-
-
-class Product(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    version: str | None = None
-    path: str | None = None
-    uid: str | None = None
-    feature: Feature | None = None
-    lang: str | None = None
-    cpe_name: str | None = None
-    url_string: str | None = None
-    vendor_name: str
-
-
 class DigitalSignature(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -715,57 +1208,25 @@ class DigitalSignature(BaseModel):
     digest: Fingerprint | None = None
     certificate: Certificate | None = None
     algorithm: str | None = None
-    algorithm_id: AlgorithmId1
+    algorithm_id: AlgorithmId
     created_time: int | None = None
     developer_uid: str | None = None
 
 
-class Container(BaseModel):
+class HttpRequest(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    name: str | None = None
-    runtime: str | None = None
-    size: int | None = None
-    tag: str | None = None
-    uid: str | None = None
-    image: Image | None = None
-    hash: Fingerprint | None = None
-    network_driver: str | None = None
-    orchestrator: str | None = None
-    pod_uuid: str | None = None
-
-
-class Request(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    data: Any | None = None
-    flags: list[str] | None = None
-    uid: str
-    containers: list[Container] | None = None
-
-
-class Attack(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
+    args: str | None = None
     version: str | None = None
-    tactics: list[Tactic] | None = None
-    technique: Technique | None = None
-    sub_technique: SubTechnique | None = None
-    tactic: Tactic | None = None
-
-
-class Observable(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str
-    type: str | None = None
-    value: str | None = None
-    type_id: TypeId6
-    reputation: Reputation | None = None
+    length: int | None = None
+    uid: str | None = None
+    url: Url | None = None
+    user_agent: str | None = None
+    http_headers: list[HttpHeader] | None = None
+    http_method: str | None = None
+    referrer: str | None = None
+    x_forwarded_for: list[str] | None = None
 
 
 class KbArticle(BaseModel):
@@ -785,63 +1246,21 @@ class KbArticle(BaseModel):
     src_url: str | None = None
 
 
-class Cvss(BaseModel):
+class NetworkConnectionInfo(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    version: str
-    depth: str | None = None
-    severity: str | None = None
-    metrics: list[Metric] | None = None
-    base_score: float
-    overall_score: float | None = None
-    vector_string: str | None = None
-
-
-class Device(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    autoscale_uid: str | None = None
-    is_trusted: bool | None = None
-    org: Organization | None = None
-    vpc_uid: str | None = None
-    created_time: int | None = None
-    risk_level_id: RiskLevelId | None = None
-    is_compliant: bool | None = None
-    is_personal: bool | None = None
-    subnet: str | None = None
-    last_seen_time: int | None = None
-    image: Image | None = None
-    os: Os | None = None
-    vlan_uid: str | None = None
-    location: Location | None = None
+    session: Session | None = None
     uid: str | None = None
-    ip: str | None = None
-    risk_score: int | None = None
-    modified_time: int | None = None
-    desc: str | None = None
-    region: str | None = None
-    hw_info: DeviceHwInfo | None = None
-    zone: str | None = None
-    domain: str | None = None
-    instance_uid: str | None = None
-    subnet_uid: str | None = None
-    imei: str | None = None
-    uid_alt: str | None = None
-    network_interfaces: list[NetworkInterface] | None = None
-    interface_uid: str | None = None
-    groups: list[Group] | None = None
-    first_seen_time: int | None = None
-    name: str | None = None
-    is_managed: bool | None = None
-    risk_level: str | None = None
-    mac: str | None = None
-    type: str | None = None
-    hypervisor: str | None = None
-    type_id: TypeId8
-    interface_name: str | None = None
-    hostname: str | None = None
+    boundary: str | None = None
+    protocol_name: str | None = None
+    direction: str | None = None
+    boundary_id: BoundaryId | None = None
+    direction_id: DirectionId
+    protocol_num: int | None = None
+    protocol_ver: str | None = None
+    protocol_ver_id: ProtocolVerId | None = None
+    tcp_flags: int | None = None
 
 
 class NetworkProxy(BaseModel):
@@ -855,10 +1274,10 @@ class NetworkProxy(BaseModel):
     domain: str | None = None
     ip: str | None = None
     location: Location | None = None
+    hostname: str | None = None
     uid: str | None = None
     mac: str | None = None
-    hostname: str | None = None
-    type_id: TypeId2 | None = None
+    type_id: TypeId6 | None = None
     hw_info: DeviceHwInfo | None = None
     instance_uid: str | None = None
     interface_name: str | None = None
@@ -872,17 +1291,15 @@ class NetworkProxy(BaseModel):
     zone: str | None = None
 
 
-class Response(BaseModel):
+class Observable(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    error: str | None = None
-    code: int | None = None
-    data: Any | None = None
-    flags: list[str] | None = None
-    message: str | None = None
-    containers: list[Container] | None = None
-    error_message: str | None = None
+    name: str
+    type: str | None = None
+    value: str | None = None
+    type_id: TypeId7
+    reputation: Reputation | None = None
 
 
 class RelatedEvent(BaseModel):
@@ -908,23 +1325,48 @@ class Remediation(BaseModel):
     kb_article_list: list[KbArticle] | None = None
 
 
-class Cve(BaseModel):
+class Request(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    type: str | None = None
-    title: str | None = None
-    product: Product | None = None
-    desc: str | None = None
+    data: Any | None = None
+    flags: list[str] | None = None
     uid: str
-    references: list[str] | None = None
-    created_time: int | None = None
-    cvss: list[Cvss] | None = None
-    cwe: Cwe | None = None
-    cwe_uid: str | None = None
-    cwe_url: str | None = None
-    epss: Epss | None = None
-    modified_time: int | None = None
+    containers: list[Container] | None = None
+
+
+class Response(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    error: str | None = None
+    code: int | None = None
+    data: Any | None = None
+    flags: list[str] | None = None
+    message: str | None = None
+    containers: list[Container] | None = None
+    error_message: str | None = None
+
+
+class Tls(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    version: str
+    alert: int | None = None
+    key_length: int | None = None
+    certificate: Certificate | None = None
+    cipher: str | None = None
+    sni: str | None = None
+    certificate_chain: list[str] | None = None
+    client_ciphers: list[str] | None = None
+    extension_list: list[TlsExtension] | None = None
+    handshake_dur: int | None = None
+    ja3_hash: Fingerprint | None = None
+    ja3s_hash: Fingerprint | None = None
+    sans: list[San] | None = None
+    server_ciphers: list[str] | None = None
+    tls_extension_list: list[TlsExtension] | None = None
 
 
 class AffectedPackage(BaseModel):
@@ -944,51 +1386,6 @@ class AffectedPackage(BaseModel):
     remediation: Remediation | None = None
 
 
-class Logger(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    version: str | None = None
-    device: Device | None = None
-    product: Product | None = None
-    uid: str | None = None
-    log_level: str | None = None
-    log_name: str | None = None
-    log_provider: str | None = None
-    log_version: str | None = None
-    logged_time: int | None = None
-    transmit_time: int | None = None
-
-
-class NetworkEndpoint(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    port: int | None = None
-    type: str | None = None
-    os: Os | None = None
-    domain: str | None = None
-    ip: str | None = None
-    location: Location | None = None
-    uid: str | None = None
-    mac: str | None = None
-    hostname: str | None = None
-    type_id: TypeId2 | None = None
-    hw_info: DeviceHwInfo | None = None
-    instance_uid: str | None = None
-    interface_name: str | None = None
-    interface_uid: str | None = None
-    intermediate_ips: list[str] | None = None
-    proxy_endpoint: NetworkProxy | None = None
-    subnet_uid: str | None = None
-    svc_name: str | None = None
-    vlan_uid: str | None = None
-    vpc_uid: str | None = None
-    zone: str | None = None
-
-
 class Api(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -999,6 +1396,71 @@ class Api(BaseModel):
     group: Group | None = None
     response: Response | None = None
     operation: str
+
+
+class Cve(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: str | None = None
+    title: str | None = None
+    product: Product | None = None
+    desc: str | None = None
+    uid: str
+    references: list[str] | None = None
+    created_time: int | None = None
+    cvss: list[Cvss] | None = None
+    cwe: Cwe | None = None
+    cwe_uid: str | None = None
+    cwe_url: str | None = None
+    epss: Epss | None = None
+    modified_time: int | None = None
+
+
+class Device(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    autoscale_uid: str | None = None
+    desc: str | None = None
+    is_trusted: bool | None = None
+    vpc_uid: str | None = None
+    created_time: int | None = None
+    risk_level_id: RiskLevelId | None = None
+    is_compliant: bool | None = None
+    is_personal: bool | None = None
+    subnet: str | None = None
+    last_seen_time: int | None = None
+    uid: str | None = None
+    image: Image | None = None
+    os: Os | None = None
+    vlan_uid: str | None = None
+    ip: str | None = None
+    risk_score: int | None = None
+    modified_time: int | None = None
+    region: str | None = None
+    hw_info: DeviceHwInfo | None = None
+    zone: str | None = None
+    domain: str | None = None
+    instance_uid: str | None = None
+    subnet_uid: str | None = None
+    imei: str | None = None
+    uid_alt: str | None = None
+    network_interfaces: list[NetworkInterface] | None = None
+    mac: str | None = None
+    interface_uid: str | None = None
+    hostname: str | None = None
+    first_seen_time: int | None = None
+    name: str | None = None
+    location: Location | None = None
+    is_managed: bool | None = None
+    risk_level: str | None = None
+    type: str | None = None
+    org: Organization | None = None
+    groups: list[Group] | None = None
+    hypervisor: str | None = None
+    type_id: TypeId2
+    interface_name: str | None = None
 
 
 class FindingInfo(BaseModel):
@@ -1021,6 +1483,23 @@ class FindingInfo(BaseModel):
     related_analytics: list[Analytic] | None = None
     related_events: list[RelatedEvent] | None = None
     src_url: str | None = None
+
+
+class Logger(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str | None = None
+    version: str | None = None
+    device: Device | None = None
+    product: Product | None = None
+    uid: str | None = None
+    log_level: str | None = None
+    log_name: str | None = None
+    log_provider: str | None = None
+    log_version: str | None = None
+    logged_time: int | None = None
+    transmit_time: int | None = None
 
 
 class Metadata(BaseModel):
@@ -1049,6 +1528,107 @@ class Metadata(BaseModel):
     tenant_uid: str | None = None
 
 
+class NetworkEndpoint(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str | None = None
+    port: int | None = None
+    type: str | None = None
+    os: Os | None = None
+    domain: str | None = None
+    ip: str | None = None
+    location: Location | None = None
+    hostname: str | None = None
+    uid: str | None = None
+    mac: str | None = None
+    type_id: TypeId4 | None = None
+    hw_info: DeviceHwInfo | None = None
+    instance_uid: str | None = None
+    interface_name: str | None = None
+    interface_uid: str | None = None
+    intermediate_ips: list[str] | None = None
+    proxy_endpoint: NetworkProxy | None = None
+    subnet_uid: str | None = None
+    svc_name: str | None = None
+    vlan_uid: str | None = None
+    vpc_uid: str | None = None
+    zone: str | None = None
+
+
+class PatchState(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status_code: str | None = None
+    timezone_offset: int | None = None
+    status_detail: str | None = None
+    observables: list[Observable] | None = None
+    class_uid: ClassUid4
+    activity_id: ActivityId4
+    raw_data: str | None = None
+    device: Device
+    kb_article_list: list[KbArticle] | None = None
+    start_time: int | None = None
+    message: str | None = None
+    unmapped: Object | None = None
+    activity_name: str | None = None
+    class_name: str | None = None
+    metadata: Metadata
+    duration: int | None = None
+    status: str | None = None
+    time: int
+    category_uid: CategoryUid4
+    end_time: int | None = None
+    type_uid: TypeUid4
+    status_id: StatusId2 | None = None
+    category_name: str | None = None
+    count: int | None = None
+    type_name: str | None = None
+    severity_id: SeverityId
+    severity: str | None = None
+    enrichments: list[Enrichment] | None = None
+
+
+class WebResourcesActivity(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status_code: str | None = None
+    timezone_offset: int | None = None
+    status_detail: str | None = None
+    observables: list[Observable] | None = None
+    class_uid: ClassUid6
+    activity_id: ActivityId6
+    raw_data: str | None = None
+    http_response: HttpResponse | None = None
+    start_time: int | None = None
+    message: str | None = None
+    src_endpoint: NetworkEndpoint | None = None
+    unmapped: Object | None = None
+    dst_endpoint: NetworkEndpoint | None = None
+    activity_name: str | None = None
+    class_name: str | None = None
+    http_request: HttpRequest | None = None
+    metadata: Metadata
+    web_resources_result: list[WebResource] | None = None
+    duration: int | None = None
+    status: str | None = None
+    time: int
+    category_uid: CategoryUid5
+    end_time: int | None = None
+    type_uid: TypeUid6
+    status_id: StatusId2 | None = None
+    category_name: str | None = None
+    count: int | None = None
+    type_name: str | None = None
+    web_resources: list[WebResource]
+    severity_id: SeverityId
+    tls: Tls | None = None
+    severity: str | None = None
+    enrichments: list[Enrichment] | None = None
+
+
 class DetectionFinding(BaseModel):
     model_config = ConfigDict(
         extra='allow',
@@ -1062,7 +1642,7 @@ class DetectionFinding(BaseModel):
     activity_id: ActivityId
     raw_data: str | None = None
     risk_level_id: RiskLevelId | None = None
-    severity: str | None = None
+    start_time: int | None = None
     message: str | None = None
     unmapped: Object | None = None
     comment: str | None = None
@@ -1071,6 +1651,7 @@ class DetectionFinding(BaseModel):
     impact: str | None = None
     metadata: Metadata
     vulnerabilities: list[Vulnerability] | None = None
+    resources: list[ResourceDetails] | None = None
     remediation: Remediation | None = None
     duration: int | None = None
     impact_id: ImpactId | None = None
@@ -1078,7 +1659,6 @@ class DetectionFinding(BaseModel):
     time: int
     confidence_score: int | None = None
     risk_score: int | None = None
-    start_time: int | None = None
     category_uid: CategoryUid
     end_time: int | None = None
     type_uid: TypeUid
@@ -1092,8 +1672,329 @@ class DetectionFinding(BaseModel):
     evidences: list[Evidences] | None = None
     confidence_id: ConfidenceId | None = None
     confidence: str | None = None
-    resources: list[ResourceDetails] | None = None
+    severity: str | None = None
     enrichments: list[Enrichment] | None = None
+
+
+class ComplianceFinding(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status_code: str | None = None
+    timezone_offset: int | None = None
+    status_detail: str | None = None
+    observables: list[Observable] | None = None
+    class_uid: ClassUid1
+    activity_id: ActivityId
+    resource: ResourceDetails | None = None
+    raw_data: str | None = None
+    start_time: int | None = None
+    message: str | None = None
+    unmapped: Object | None = None
+    comment: str | None = None
+    activity_name: str | None = None
+    class_name: str | None = None
+    metadata: Metadata
+    remediation: Remediation | None = None
+    duration: int | None = None
+    status: str | None = None
+    time: int
+    confidence_score: int | None = None
+    category_uid: CategoryUid
+    end_time: int | None = None
+    type_uid: TypeUid1
+    status_id: StatusId | None = None
+    compliance: Compliance
+    finding_info: FindingInfo
+    category_name: str | None = None
+    count: int | None = None
+    type_name: str | None = None
+    severity_id: SeverityId
+    confidence_id: ConfidenceId | None = None
+    confidence: str | None = None
+    severity: str | None = None
+    enrichments: list[Enrichment] | None = None
+
+
+class Authentication(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status_code: str | None = None
+    timezone_offset: int | None = None
+    status_detail: str | None = None
+    service: Service | None = None
+    logon_type_id: LogonTypeId | None = None
+    observables: list[Observable] | None = None
+    class_uid: ClassUid2
+    certificate: Certificate | None = None
+    activity_id: ActivityId2
+    raw_data: str | None = None
+    is_mfa: bool | None = None
+    start_time: int | None = None
+    message: str | None = None
+    src_endpoint: NetworkEndpoint | None = None
+    unmapped: Object | None = None
+    dst_endpoint: NetworkEndpoint | None = None
+    activity_name: str | None = None
+    class_name: str | None = None
+    http_request: HttpRequest | None = None
+    metadata: Metadata
+    is_remote: bool | None = None
+    duration: int | None = None
+    status: str | None = None
+    time: int
+    logon_process: Process | None = None
+    category_uid: CategoryUid2
+    user: User
+    end_time: int | None = None
+    type_uid: TypeUid2
+    status_id: StatusId2 | None = None
+    auth_protocol_id: AuthProtocolId | None = None
+    session: Session | None = None
+    category_name: str | None = None
+    count: int | None = None
+    auth_protocol: str | None = None
+    type_name: str | None = None
+    is_cleartext: bool | None = None
+    severity_id: SeverityId
+    is_new_logon: bool | None = None
+    logon_type: str | None = None
+    severity: str | None = None
+    enrichments: list[Enrichment] | None = None
+    actor: Actor | None = None
+
+
+class AccountChange(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status_code: str | None = None
+    timezone_offset: int | None = None
+    status_detail: str | None = None
+    observables: list[Observable] | None = None
+    class_uid: ClassUid3
+    activity_id: ActivityId3
+    raw_data: str | None = None
+    start_time: int | None = None
+    message: str | None = None
+    src_endpoint: NetworkEndpoint | None = None
+    unmapped: Object | None = None
+    user_result: User | None = None
+    activity_name: str | None = None
+    class_name: str | None = None
+    http_request: HttpRequest | None = None
+    metadata: Metadata
+    duration: int | None = None
+    status: str | None = None
+    time: int
+    category_uid: CategoryUid2
+    user: User
+    end_time: int | None = None
+    type_uid: TypeUid3
+    status_id: StatusId2 | None = None
+    category_name: str | None = None
+    count: int | None = None
+    type_name: str | None = None
+    policy: Policy | None = None
+    severity_id: SeverityId
+    severity: str | None = None
+    enrichments: list[Enrichment] | None = None
+    actor: Actor | None = None
+
+
+class ApiActivity(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status_code: str | None = None
+    timezone_offset: int | None = None
+    status_detail: str | None = None
+    observables: list[Observable] | None = None
+    class_uid: ClassUid5
+    activity_id: ActivityId5
+    raw_data: str | None = None
+    api: Api
+    start_time: int | None = None
+    message: str | None = None
+    src_endpoint: NetworkEndpoint
+    unmapped: Object | None = None
+    dst_endpoint: NetworkEndpoint | None = None
+    activity_name: str | None = None
+    class_name: str | None = None
+    http_request: HttpRequest | None = None
+    metadata: Metadata
+    resources: list[ResourceDetails] | None = None
+    duration: int | None = None
+    status: str | None = None
+    time: int
+    category_uid: CategoryUid5
+    end_time: int | None = None
+    type_uid: TypeUid5
+    status_id: StatusId2 | None = None
+    category_name: str | None = None
+    count: int | None = None
+    type_name: str | None = None
+    severity_id: SeverityId
+    severity: str | None = None
+    enrichments: list[Enrichment] | None = None
+    actor: Actor
+
+
+class FileHosting(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    status_code: str | None = None
+    timezone_offset: int | None = None
+    status_detail: str | None = None
+    observables: list[Observable] | None = None
+    class_uid: ClassUid7
+    activity_id: ActivityId7
+    raw_data: str | None = None
+    start_time: int | None = None
+    message: str | None = None
+    src_endpoint: NetworkEndpoint
+    unmapped: Object | None = None
+    dst_endpoint: NetworkEndpoint | None = None
+    activity_name: str | None = None
+    class_name: str | None = None
+    file: File
+    metadata: Metadata
+    duration: int | None = None
+    status: str | None = None
+    time: int
+    category_uid: CategoryUid5
+    end_time: int | None = None
+    type_uid: TypeUid7
+    status_id: StatusId2 | None = None
+    category_name: str | None = None
+    count: int | None = None
+    type_name: str | None = None
+    connection_info: NetworkConnectionInfo | None = None
+    severity_id: SeverityId
+    severity: str | None = None
+    enrichments: list[Enrichment] | None = None
+    actor: Actor
+    expiration_time: int | None = None
+
+
+class Actor(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    process: Process | None = None
+    session: Session | None = None
+    user: User | None = None
+    authorizations: list[Authorization] | None = None
+    idp: Idp | None = None
+    invoked_by: str | None = None
+
+
+class AffectedCode(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    owner: User | None = None
+    file: File
+    end_line: int | None = None
+    remediation: Remediation | None = None
+    start_line: int | None = None
+
+
+class Evidences(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    data: Any | None = None
+    process: Process | None = None
+    file: File | None = None
+    query: DnsQuery | None = None
+    connection_info: NetworkConnectionInfo | None = None
+    api: Api | None = None
+    actor: Actor | None = None
+    dst_endpoint: NetworkEndpoint | None = None
+    src_endpoint: NetworkEndpoint | None = None
+
+
+class File(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    attributes: int | None = None
+    name: str
+    owner: User | None = None
+    size: int | None = None
+    type: str | None = None
+    version: str | None = None
+    path: str | None = None
+    signature: DigitalSignature | None = None
+    modifier: User | None = None
+    product: Product | None = None
+    desc: str | None = None
+    uid: str | None = None
+    type_id: TypeId3
+    accessor: User | None = None
+    company_name: str | None = None
+    creator: User | None = None
+    mime_type: str | None = None
+    parent_folder: str | None = None
+    accessed_time: int | None = None
+    confidentiality: str | None = None
+    confidentiality_id: ConfidentialityId | None = None
+    created_time: int | None = None
+    hashes: list[Fingerprint] | None = None
+    is_system: bool | None = None
+    modified_time: int | None = None
+    security_descriptor: str | None = None
+    xattributes: Object | None = None
+
+
+class LdapPerson(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    location: Location | None = None
+    labels: list[str] | None = None
+    manager: User | None = None
+    cost_center: str | None = None
+    created_time: int | None = None
+    deleted_time: int | None = None
+    email_addrs: list[str] | None = None
+    employee_uid: str | None = None
+    given_name: str | None = None
+    hire_time: int | None = None
+    job_title: str | None = None
+    last_login_time: int | None = None
+    ldap_cn: str | None = None
+    ldap_dn: str | None = None
+    leave_time: int | None = None
+    modified_time: int | None = None
+    office_location: str | None = None
+    surname: str | None = None
+
+
+class Process(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str | None = None
+    pid: int | None = None
+    session: Session | None = None
+    file: File | None = None
+    user: User | None = None
+    tid: int | None = None
+    uid: str | None = None
+    loaded_modules: list[str] | None = None
+    cmd_line: str | None = None
+    created_time: int | None = None
+    integrity: str | None = None
+    integrity_id: IntegrityId | None = None
+    lineage: list[str] | None = None
+    parent_process: Process | None = None
+    sandbox: str | None = None
+    terminated_time: int | None = None
+    xattributes: Object | None = None
 
 
 class ResourceDetails(BaseModel):
@@ -1122,120 +2023,13 @@ class User(BaseModel):
     uid: str | None = None
     org: Organization | None = None
     groups: list[Group] | None = None
-    type_id: TypeId | None = None
+    type_id: TypeId10 | None = None
     full_name: str | None = None
     account: Account | None = None
     credential_uid: str | None = None
     email_addr: str | None = None
     ldap_person: LdapPerson | None = None
     uid_alt: str | None = None
-
-
-class LdapPerson(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    location: Location | None = None
-    labels: list[str] | None = None
-    manager: User | None = None
-    cost_center: str | None = None
-    created_time: int | None = None
-    deleted_time: int | None = None
-    email_addrs: list[str] | None = None
-    employee_uid: str | None = None
-    given_name: str | None = None
-    hire_time: int | None = None
-    job_title: str | None = None
-    last_login_time: int | None = None
-    ldap_cn: str | None = None
-    ldap_dn: str | None = None
-    leave_time: int | None = None
-    modified_time: int | None = None
-    office_location: str | None = None
-    surname: str | None = None
-
-
-class Evidences(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    data: Any | None = None
-    process: Process | None = None
-    file: File | None = None
-    query: DnsQuery | None = None
-    connection_info: NetworkConnectionInfo | None = None
-    api: Api | None = None
-    actor: Actor | None = None
-    dst_endpoint: NetworkEndpoint | None = None
-    src_endpoint: NetworkEndpoint | None = None
-
-
-class Actor(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    process: Process | None = None
-    session: Session | None = None
-    user: User | None = None
-    authorizations: list[Authorization] | None = None
-    idp: Idp | None = None
-    invoked_by: str | None = None
-
-
-class Process(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    name: str | None = None
-    pid: int | None = None
-    session: Session | None = None
-    file: File | None = None
-    user: User | None = None
-    tid: int | None = None
-    uid: str | None = None
-    loaded_modules: list[str] | None = None
-    cmd_line: str | None = None
-    created_time: int | None = None
-    integrity: str | None = None
-    integrity_id: IntegrityId | None = None
-    lineage: list[str] | None = None
-    parent_process: Process | None = None
-    sandbox: str | None = None
-    terminated_time: int | None = None
-    xattributes: Object | None = None
-
-
-class File(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    attributes: int | None = None
-    name: str
-    owner: User | None = None
-    size: int | None = None
-    type: str | None = None
-    version: str | None = None
-    path: str | None = None
-    signature: DigitalSignature | None = None
-    product: Product | None = None
-    modifier: User | None = None
-    desc: str | None = None
-    uid: str | None = None
-    type_id: TypeId5
-    accessor: User | None = None
-    company_name: str | None = None
-    creator: User | None = None
-    mime_type: str | None = None
-    parent_folder: str | None = None
-    accessed_time: int | None = None
-    confidentiality: str | None = None
-    confidentiality_id: ConfidentialityId | None = None
-    created_time: int | None = None
-    hashes: list[Fingerprint] | None = None
-    is_system: bool | None = None
-    modified_time: int | None = None
-    security_descriptor: str | None = None
-    xattributes: Object | None = None
 
 
 class Vulnerability(BaseModel):
@@ -1263,23 +2057,18 @@ class Vulnerability(BaseModel):
     vendor_name: str | None = None
 
 
-class AffectedCode(BaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
-    owner: User | None = None
-    file: File
-    end_line: int | None = None
-    remediation: Remediation | None = None
-    start_line: int | None = None
-
-
 Analytic.model_rebuild()
 NetworkProxy.model_rebuild()
 DetectionFinding.model_rebuild()
-ResourceDetails.model_rebuild()
-User.model_rebuild()
-Evidences.model_rebuild()
+ComplianceFinding.model_rebuild()
+Authentication.model_rebuild()
+AccountChange.model_rebuild()
+ApiActivity.model_rebuild()
+FileHosting.model_rebuild()
 Actor.model_rebuild()
+AffectedCode.model_rebuild()
+Evidences.model_rebuild()
+File.model_rebuild()
+LdapPerson.model_rebuild()
 Process.model_rebuild()
-Vulnerability.model_rebuild()
+ResourceDetails.model_rebuild()

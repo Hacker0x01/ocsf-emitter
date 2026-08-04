@@ -27,14 +27,28 @@ import pytest
 import ocsf_emitter
 from ocsf_emitter import (
     Activity,
+    ApiCall,
+    ComplianceRef,
     Confidence,
+    DeviceRef,
+    EndpointRef,
+    FileRef,
     MitreAttack,
     Observable,
     ObservableType,
     RiskLevel,
     Severity,
     Status,
+    UserRef,
+    WebResourceRef,
+    build_account_change,
+    build_api_activity,
+    build_authentication,
+    build_compliance_finding,
     build_detection_finding,
+    build_file_hosting,
+    build_patch_state,
+    build_web_resources_activity,
     emit,
 )
 
@@ -72,12 +86,83 @@ def _sample_payload() -> dict[str, object]:
     return emit(finding)
 
 
-def test_emitted_finding_is_valid_per_aws_tool(tmp_path: Path) -> None:
-    assert TOOL_DIR is not None  # guarded by pytestmark
-    target = tmp_path / "records"
-    target.mkdir()
-    (target / "finding.json").write_text(json.dumps(_sample_payload()))
+def _all_class_payloads() -> dict[str, dict[str, object]]:
+    """One emitted payload per supported OCSF class, keyed by a short name.
 
+    NOTE: AWS Security Lake historically maps only ``detection_finding`` for
+    custom sources; the other classes are validated here for OCSF-schema
+    conformance via the same tool, which validates any class it can resolve.
+    """
+    product = ocsf_emitter.make_product(
+        name="Example Detector", vendor_name="Example, Inc.", version="1.0.0"
+    )
+    sev = Severity.MEDIUM
+    when = 1_752_566_400_000
+    return {
+        "detection_finding": _sample_payload(),
+        "compliance_finding": emit(
+            build_compliance_finding(
+                title="NTP not synchronized",
+                compliance=ComplianceRef(standards=["CIS"], control="2.1"),
+                severity=sev,
+                product=product,
+                time_ms=when,
+            )
+        ),
+        "authentication": emit(
+            build_authentication(
+                user=UserRef(name="alice", email="a@example.com"),
+                severity=sev,
+                product=product,
+                time_ms=when,
+            )
+        ),
+        "account_change": emit(
+            build_account_change(
+                user=UserRef(name="bob"), severity=sev, product=product, time_ms=when
+            )
+        ),
+        "patch_state": emit(
+            build_patch_state(
+                device=DeviceRef(hostname="web01", os_name="ubuntu", os_version="22.04"),
+                severity=sev,
+                product=product,
+                time_ms=when,
+            )
+        ),
+        "api_activity": emit(
+            build_api_activity(
+                api=ApiCall(operation="CreateAccessKey", service="iam.amazonaws.com"),
+                src_endpoint=EndpointRef(ip="203.0.113.7"),
+                actor_user=UserRef(name="root"),
+                severity=sev,
+                product=product,
+                time_ms=when,
+            )
+        ),
+        "web_resources_activity": emit(
+            build_web_resources_activity(
+                web_resources=[WebResourceRef(name="report-123", type="report")],
+                severity=sev,
+                product=product,
+                time_ms=when,
+            )
+        ),
+        "file_hosting": emit(
+            build_file_hosting(
+                file=FileRef(name="secret.pdf", mime_type="application/pdf"),
+                src_endpoint=EndpointRef(ip="198.51.100.9"),
+                actor_user=UserRef(email="a@example.com"),
+                severity=sev,
+                product=product,
+                time_ms=when,
+            )
+        ),
+    }
+
+
+def _run_validator(target: Path) -> str:
+    assert TOOL_DIR is not None  # guarded by pytestmark
     result = subprocess.run(  # noqa: S603
         [sys.executable, "validate.py", "-i", str(target)],
         cwd=TOOL_DIR,
@@ -85,10 +170,25 @@ def test_emitted_finding_is_valid_per_aws_tool(tmp_path: Path) -> None:
         text=True,
         timeout=180,
     )
-
     combined = result.stdout + result.stderr
     # The tool prints "VALID OCSF." to stdout and "INVALID OCSF." when it fails;
     # it also sys.exit()s (traceback) on structural/version problems.
     assert "INVALID OCSF" not in combined, f"AWS tool reported INVALID:\n{combined}"
     assert "VALID OCSF" in combined, f"AWS tool did not report VALID:\n{combined}"
     assert result.returncode == 0, f"AWS tool exited {result.returncode}:\n{combined}"
+    return combined
+
+
+def test_emitted_finding_is_valid_per_aws_tool(tmp_path: Path) -> None:
+    target = tmp_path / "records"
+    target.mkdir()
+    (target / "finding.json").write_text(json.dumps(_sample_payload()))
+    _run_validator(target)
+
+
+@pytest.mark.parametrize("class_name", list(_all_class_payloads()))
+def test_every_class_is_valid_per_aws_tool(class_name: str, tmp_path: Path) -> None:
+    target = tmp_path / "records"
+    target.mkdir()
+    (target / f"{class_name}.json").write_text(json.dumps(_all_class_payloads()[class_name]))
+    _run_validator(target)
