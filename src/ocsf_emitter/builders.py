@@ -76,7 +76,10 @@ def build_observable(observable: Observable) -> _m.Observable:
     return _m.Observable(
         name=observable.name if observable.name is not None else observable.type.value,
         value=observable.value,
-        type_id=_m.TypeId6(_OBSERVABLE_TYPE_TO_ID[observable.type]),
+        # Observable.type_id is TypeId7 (the observable type_id enum: 0-10, 20-30,
+        # 99). TypeId6 is a different, narrower enum (0-11, 99) and rejects e.g.
+        # process_name=20, so use the field's own enum.
+        type_id=_m.TypeId7(_OBSERVABLE_TYPE_TO_ID[observable.type]),
     )
 
 

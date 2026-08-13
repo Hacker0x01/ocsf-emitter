@@ -53,6 +53,31 @@ def _build(clock: Callable[[], int]) -> DetectionFinding:
     )
 
 
+@pytest.mark.parametrize("obs_type", list(ObservableType))
+def test_build_observable_covers_every_type(obs_type: ObservableType) -> None:
+    # Every ObservableType must map to an id the Observable.type_id enum accepts.
+    # Regression guard: build_observable once used the wrong enum (TypeId6, which
+    # rejects process_name=20), so any finding with such an observable crashed.
+    from ocsf_emitter.builders import build_observable
+
+    obs = build_observable(Observable(obs_type, "value"))
+    assert int(obs.type_id) >= 0  # constructed without ValueError
+
+
+def test_finding_with_process_observable_round_trips() -> None:
+    # process_name (observable type_id 20) is the case the wrong-enum bug broke.
+    finding = build_detection_finding(
+        uid="det-proc",
+        title="Suspicious process",
+        severity=Severity.HIGH,
+        message="ran a shell",
+        observables=[Observable(ObservableType.PROCESS_NAME, "/bin/sh -c evil")],
+        time_ms=FIXED_TIME_MS,
+    )
+    payload = emit(finding)
+    assert payload["observables"][0]["type_id"] == 20
+
+
 def test_valid_finding_round_trips(fixed_clock: Callable[[], int]) -> None:
     finding = _build(fixed_clock)
     payload = emit(finding)
