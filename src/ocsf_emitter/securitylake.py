@@ -84,7 +84,7 @@ def _prune_empty_structs(value: object) -> object:
     output is unaffected; this only shapes the Parquet table.
     """
     if isinstance(value, dict):
-        pruned: dict[object, object] = {}
+        pruned: dict[str, object] = {}
         for key, item in value.items():
             item = _prune_empty_structs(item)
             if item == {}:  # hollow struct -> unwritable in Parquet, drop it
@@ -96,12 +96,21 @@ def _prune_empty_structs(value: object) -> object:
     return value
 
 
+def _pruned_payload(finding: SupportedEvent) -> dict[str, object]:
+    """emit() the finding, then drop hollow structs so pyarrow can infer schema.
+
+    ``emit`` always returns a dict, so pruning it returns a dict; the annotation
+    narrows the recursive helper's ``object`` return for the callers.
+    """
+    pruned = _prune_empty_structs(emit(finding))
+    assert isinstance(pruned, dict)  # emit() returns a dict; prune preserves it
+    return pruned
+
+
 def _validated_payloads(findings: Iterable[SupportedEvent]) -> list[dict[str, object]]:
-    # emit() validates each finding and returns a JSON-serializable dict; prune
-    # hollow structs so pyarrow can infer every struct column's schema.
-    payloads = [_prune_empty_structs(emit(f)) for f in findings]
+    payloads = [_pruned_payload(f) for f in findings]
     # Security Lake asks for records sorted by time within each object.
-    payloads.sort(key=lambda p: p.get("time", 0))  # type: ignore[union-attr]
+    payloads.sort(key=lambda p: p.get("time", 0))  # type: ignore[arg-type,return-value]
     return payloads
 
 
