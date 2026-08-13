@@ -7,7 +7,16 @@ import io
 import pyarrow.parquet as pq
 import pytest
 
-from ocsf_emitter import Activity, Severity, build_detection_finding
+from ocsf_emitter import (
+    Activity,
+    ApiCall,
+    FileRef,
+    Severity,
+    UserRef,
+    build_api_activity,
+    build_detection_finding,
+    build_file_hosting,
+)
 from ocsf_emitter import securitylake as sl
 from ocsf_emitter._models import DetectionFinding
 
@@ -108,3 +117,54 @@ def test_empty_findings_rejected() -> None:
             account_id="123456789012",
             object_name="o",
         )
+
+
+def test_prune_empty_structs_drops_hollow_and_keeps_data() -> None:
+    payload = {
+        "time": 1,
+        "actor": {},  # hollow struct -> dropped
+        "src_endpoint": {"hostname": "slack.com"},  # kept
+        "file": {"name": "q3.csv", "reputation": {}},  # nested hollow child dropped
+        "web_resources": [{}, {"name": "r"}],  # list: element-wise prune
+    }
+    assert sl._prune_empty_structs(payload) == {
+        "time": 1,
+        "src_endpoint": {"hostname": "slack.com"},
+        "file": {"name": "q3.csv"},
+        "web_resources": [{}, {"name": "r"}],
+    }
+
+
+def test_file_hosting_without_endpoint_writes_parquet() -> None:
+    # File Hosting (6006) requires actor + src_endpoint, both all-optional; the
+    # builder synthesizes hollow ones that used to crash the Parquet writer with
+    # ArrowNotImplementedError. They must now be pruned and the object written.
+    fh = build_file_hosting(
+        file=FileRef(name="q3.csv", mime_type="text/csv"),
+        severity=Severity.MEDIUM,
+        actor_user=UserRef(email="alice@example.com"),
+        message="A file was shared in Slack.",
+        time_ms=1_752_566_400_000,
+    )
+    data = sl.to_parquet_bytes([fh])
+    assert data.startswith(b"PAR1")
+    table = pq.read_table(io.BytesIO(data))
+    assert table.num_rows == 1
+    # actor was populated (has a user) so it survives; src_endpoint was hollow.
+    assert "src_endpoint" not in table.column_names
+    assert "actor" in table.column_names
+
+
+def test_api_activity_without_endpoint_writes_parquet() -> None:
+    aa = build_api_activity(
+        api=ApiCall(operation="GetObject", service="s3"),
+        severity=Severity.LOW,
+        time_ms=1_752_566_400_000,
+    )
+    # Neither actor nor src_endpoint supplied: both hollow, both pruned.
+    data = sl.to_parquet_bytes([aa])
+    assert data.startswith(b"PAR1")
+    table = pq.read_table(io.BytesIO(data))
+    assert table.num_rows == 1
+    assert "src_endpoint" not in table.column_names
+    assert "actor" not in table.column_names

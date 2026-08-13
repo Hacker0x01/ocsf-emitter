@@ -66,11 +66,42 @@ def event_day_from_ms(time_ms: int) -> str:
     return datetime.fromtimestamp(time_ms / 1000, tz=UTC).strftime("%Y%m%d")
 
 
+def _prune_empty_structs(value: object) -> object:
+    """Recursively drop dict entries whose value is an empty struct (``{}``).
+
+    ``emit`` serializes with ``exclude_none``, so an OCSF object whose every
+    attribute is ``None`` becomes an empty dict. PyArrow cannot infer a Parquet
+    column type for a struct with no child fields and raises
+    ``ArrowNotImplementedError`` ("Cannot write struct type ... with no child
+    field"). Some OCSF classes mark an object as required while it has no
+    required children (e.g. File Hosting 6006 / API Activity 6003 require
+    ``actor`` and ``src_endpoint``, both all-optional), so the builders emit a
+    hollow ``{}`` for them and every such event would be unwritable.
+
+    Pruning is applied bottom-up so a dict that becomes empty only after its own
+    children are pruned is dropped too; lists are pruned element-wise. An empty
+    struct carries no data, so removing it is loss-free -- the JSON ``emit``
+    output is unaffected; this only shapes the Parquet table.
+    """
+    if isinstance(value, dict):
+        pruned: dict[object, object] = {}
+        for key, item in value.items():
+            item = _prune_empty_structs(item)
+            if item == {}:  # hollow struct -> unwritable in Parquet, drop it
+                continue
+            pruned[key] = item
+        return pruned
+    if isinstance(value, list):
+        return [_prune_empty_structs(item) for item in value]
+    return value
+
+
 def _validated_payloads(findings: Iterable[SupportedEvent]) -> list[dict[str, object]]:
-    # emit() validates each finding and returns a JSON-serializable dict.
-    payloads = [emit(f) for f in findings]
+    # emit() validates each finding and returns a JSON-serializable dict; prune
+    # hollow structs so pyarrow can infer every struct column's schema.
+    payloads = [_prune_empty_structs(emit(f)) for f in findings]
     # Security Lake asks for records sorted by time within each object.
-    payloads.sort(key=lambda p: p.get("time", 0))
+    payloads.sort(key=lambda p: p.get("time", 0))  # type: ignore[union-attr]
     return payloads
 
 
