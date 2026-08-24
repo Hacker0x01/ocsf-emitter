@@ -1,13 +1,13 @@
 [project]
 name = "ocsf-emitter"
 version = "0.1.4"
-description = "Construct, validate, and emit OCSF 1.1.0 events (Detection Finding, Compliance Finding, Authentication, Account Change, OS Patch State, API Activity, Web Resources Activity, File Hosting Activity) with a consistent shape."
+description = "Construct, validate, and emit OCSF 1.5.0 events (Detection Finding, Compliance Finding, Authentication, Account Change, OS Patch State, API Activity, Web Resources Activity, File Hosting Activity) with a consistent shape."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "HackerOne" }]
-keywords = ["ocsf", "detection", "finding", "security-lake", "siem"]
+keywords = ["ocsf", "detection", "finding", "siem", "security"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -29,10 +29,6 @@ codegen = [
     "ocsf-lib>=0.10,<1",
     "datamodel-code-generator[http]>=0.25",
 ]
-# Parquet writer for AWS Security Lake ingestion (ocsf_emitter.securitylake).
-securitylake = [
-    "pyarrow>=14",
-]
 
 [project.urls]
 Homepage = "https://github.com/Hacker0x01/ocsf-emitter"
@@ -45,7 +41,8 @@ dev = [
     "mypy>=1.9",
     "pytest>=8",
     "ruff>=0.4",
-    "pyarrow>=14",
+    # Used by the OCSF-schema conformance test (tests/test_integ_ocsf_schema.py).
+    "jsonschema>=4.19",
 ]
 docs = [
     "mkdocs>=1.6",
@@ -94,7 +91,7 @@ module = "ocsf_emitter._models"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = ["pyarrow.*"]
+module = ["jsonschema.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

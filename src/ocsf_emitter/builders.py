@@ -69,17 +69,18 @@ def _new_uid() -> str:
 def build_observable(observable: Observable) -> _m.Observable:
     """Map one domain Observable to an OCSF observable model.
 
-    OCSF ``observable.name`` is the attribute name/path and is required in
-    1.1.0. When the caller does not supply one we fall back to the observable
-    type's label (e.g. ``"ip_address"``).
+    OCSF ``observable.name`` is the attribute name/path and is required. When the
+    caller does not supply one we fall back to the observable type's label (e.g.
+    ``"ip_address"``).
     """
     return _m.Observable(
         name=observable.name if observable.name is not None else observable.type.value,
         value=observable.value,
-        # Observable.type_id is TypeId7 (the observable type_id enum: 0-10, 20-30,
-        # 99). TypeId6 is a different, narrower enum (0-11, 99) and rejects e.g.
-        # process_name=20, so use the field's own enum.
-        type_id=_m.TypeId7(_OBSERVABLE_TYPE_TO_ID[observable.type]),
+        # Pass the plain int; Pydantic coerces it into whichever per-object enum
+        # the generated ``type_id`` field uses. Do NOT hardcode ``_m.TypeIdN`` --
+        # datamodel-codegen renumbers those names across schema versions, and the
+        # observable type enum is a wide one (0-10, 20-30, 99).
+        type_id=_OBSERVABLE_TYPE_TO_ID[observable.type],
     )
 
 
@@ -109,7 +110,9 @@ def build_device(device: DeviceRef) -> _m.Device:
     if device.os_name or device.os_version or device.os_sp_name or device.os_sp_ver:
         os = _m.Os(
             name=device.os_name if device.os_name is not None else "unknown",
-            type_id=_m.TypeId8(device.os_type_id),
+            # Plain ints; Pydantic coerces into the field's per-object enum (see
+            # build_observable -- generated enum names are not version-stable).
+            type_id=device.os_type_id,
             version=device.os_version,
             sp_name=device.os_sp_name,
             sp_ver=device.os_sp_ver,
@@ -117,7 +120,7 @@ def build_device(device: DeviceRef) -> _m.Device:
     return _m.Device(
         hostname=device.hostname,
         uid=device.uid,
-        type_id=_m.TypeId2(device.type_id),
+        type_id=device.type_id,
         os=os,
     )
 
@@ -126,7 +129,7 @@ def build_file(file: FileRef) -> _m.File:
     """Map a domain FileRef to an OCSF file object."""
     return _m.File(
         name=file.name,
-        type_id=_m.TypeId3(file.type_id),
+        type_id=file.type_id,  # plain int; Pydantic coerces (see build_observable)
         mime_type=file.mime_type,
         uid=file.uid,
         path=file.path,

@@ -1,6 +1,6 @@
 # ocsf-emitter
 
-Construct, validate, and emit **OCSF 1.1.0** events with a consistent shape and
+Construct, validate, and emit **OCSF 1.5.0** events with a consistent shape and
 mandatory runtime validation. Supports eight classes — Detection Finding (2004),
 Compliance Finding (2003), Authentication (3002), Account Change (3001),
 Operating System Patch State (5004), API Activity (6003), Web Resources Activity
@@ -24,15 +24,13 @@ validated, JSON-serializable payload and the caller ships it however it likes.
   raises [`InvalidFindingError`][ocsf_emitter.errors.InvalidFindingError] naming
   the offending field(s).
 - **Fully typed.** Complete type hints, `mypy --strict` clean, ships `py.typed`.
-- **AWS Security Lake ready.** Pinned to OCSF 1.1.0 and proven against AWS's own
-  OCSF validation tool; an optional Parquet writer packages findings for
-  ingestion. See [AWS Security Lake](security-lake.md).
+- **Schema-conformant.** Pinned to OCSF 1.5.0; emitted events are checked against
+  the official OCSF JSON Schema in CI (`tests/test_integ_ocsf_schema.py`).
 
 ## Install
 
 ```bash
-pip install ocsf-emitter                  # runtime: pydantic only
-pip install "ocsf-emitter[securitylake]"  # + pyarrow, for the Parquet writer
+pip install ocsf-emitter   # runtime: pydantic only
 ```
 
 ## Quickstart

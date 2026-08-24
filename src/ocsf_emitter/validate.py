@@ -93,7 +93,7 @@ def validate(finding: SupportedEvent) -> SupportedEvent:
             f"got {int(finding.type_uid)}"
         )
 
-    # Sibling name fields must match the class (AWS Security Lake checks these).
+    # Sibling name fields must match the class (OCSF consumers rely on these).
     if finding.category_name != spec.category_name:
         problems.append(
             f"category_name: expected {spec.category_name!r}, got {finding.category_name!r}"
