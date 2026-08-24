@@ -18,9 +18,9 @@ Pipeline:
        fields (cloud, osint, ...) are not forced into the required list.
     3. Feed that JSON Schema to ``datamodel-code-generator`` -> Pydantic v2.
 
-Why the pinned version matters: AWS Security Lake custom sources accept OCSF
-1.1.0 / 1.0.0-rc.2, and the AWS OCSF validation tool only validates those. We
-pin 1.1.0 (see ``ocsf_emitter.defaults.OCSF_SCHEMA_VERSION``).
+The target version is pinned in one place (``ocsf_emitter.defaults.OCSF_SCHEMA_VERSION``,
+kept in sync with ``DEFAULT_VERSION`` here). Bumping it is a one-line change plus
+a regeneration.
 
 Usage:
     uv run --extra codegen python scripts/gen_models.py [VERSION]
@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Any
 
 # The version we pin by default. Keep in sync with defaults.OCSF_SCHEMA_VERSION.
-DEFAULT_VERSION = "1.1.0"
+DEFAULT_VERSION = "1.5.0"
 
 # The OCSF classes we generate models for, by metaschema key. Each becomes a
 # top-level Pydantic model; their shared object closures are deduplicated. Keep

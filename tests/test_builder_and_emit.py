@@ -149,9 +149,9 @@ def test_invalid_finding_rejected(fixed_clock: Callable[[], int]) -> None:
     assert any("severity_id" in fe for fe in excinfo.value.field_errors)
 
 
-def test_pinned_version_is_security_lake_compatible() -> None:
-    """Guard the pin: AWS Security Lake / its OCSF validator accept only these."""
-    assert ocsf_emitter.OCSF_SCHEMA_VERSION in {"1.1.0", "1.0.0-rc.2"}
+def test_pinned_version_matches_target() -> None:
+    """Guard the pin: emitted events and generated models target this OCSF version."""
+    assert ocsf_emitter.OCSF_SCHEMA_VERSION == "1.5.0"
 
 
 def test_invalid_type_uid_rejected(fixed_clock: Callable[[], int]) -> None:

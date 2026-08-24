@@ -28,10 +28,8 @@ jobs:
         with:
           enable-cache: true
 
-      # mkdocstrings imports the package to read its docstrings, so install the
-      # securitylake extra too (pyarrow) or ocsf_emitter.securitylake won't import.
       - name: Build the docs site
-        run: uv run --group docs --extra securitylake mkdocs build --strict
+        run: uv run --group docs mkdocs build --strict
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

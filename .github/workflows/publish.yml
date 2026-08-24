@@ -24,7 +24,7 @@ jobs:
         run: uv run mypy
 
       - name: Test
-        run: uv run pytest -q --ignore=tests/test_integ_aws_validation.py
+        run: uv run pytest -q --ignore=tests/test_integ_ocsf_schema.py
 
   build:
     runs-on: ubuntu-latest

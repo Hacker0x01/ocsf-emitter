@@ -54,7 +54,7 @@ integers by the functions in [`defaults`](api/defaults.md).
 ## Supported OCSF classes
 
 Beyond Detection Finding, the library builds/validates/emits the OCSF classes
-below (all OCSF 1.1.0). Each has a dedicated builder with the same keyword shape
+below (all OCSF 1.5.0). Each has a dedicated builder with the same keyword shape
 (`severity`, `message`, `time_ms`, `product`, `clock`) plus that class's
 required objects. `emit`/`validate` accept any of them.
 

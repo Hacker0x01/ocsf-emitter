@@ -16,13 +16,10 @@ from . import _models as _m
 #
 # Bumping the target OCSF version is a ONE-LINE change here -- then regenerate
 # the models with `uv run --extra codegen python scripts/gen_models.py <version>`
-# so the committed _models.py matches.
-#
-# Pinned to 1.1.0 for AWS Security Lake compatibility: custom sources accept
-# OCSF 1.1.0 / 1.0.0-rc.2, and the AWS OCSF validation tool only validates those
-# (detection_finding is mapped only under 1.1.0). See README.
+# so the committed _models.py matches (keep DEFAULT_VERSION in gen_models.py in
+# sync). Emitted events carry this in ``metadata.version``.
 # --------------------------------------------------------------------------- #
-OCSF_SCHEMA_VERSION = "1.1.0"
+OCSF_SCHEMA_VERSION = "1.5.0"
 
 # Detection Finding class identity (OCSF Findings category). Fixed by the OCSF
 # spec for class_uid 2004. In the generated model these are IntEnums, so we hold
@@ -33,9 +30,9 @@ CATEGORY_UID = 2
 TYPE_UID_BASE = CLASS_UID * 100
 
 # Sibling name fields for the *_uid enums. These are the human-readable labels
-# OCSF pairs with class_uid/category_uid. AWS Security Lake (and its OCSF
-# validation tool) expect category_name to be present and class_name, if set, to
-# match the class. Values are fixed by the OCSF 2004 spec.
+# OCSF pairs with class_uid/category_uid; consumers expect category_name to be
+# present and class_name, if set, to match the class. Values are fixed by the
+# OCSF 2004 spec.
 #
 # These module-level constants are retained for backward compatibility and refer
 # to the Detection Finding class; the multi-class machinery below derives the
@@ -80,7 +77,7 @@ class ClassSpec:
         return self.class_uid * 100 + activity_id_value
 
 
-# Category name siblings, per the OCSF 1.1.0 categories:
+# Category name siblings, per the OCSF categories:
 #   Findings (2), Identity & Access Management (3), Discovery (5),
 #   Application Activity (6).
 _CLASS_REGISTRY: dict[OcsfClass, ClassSpec] = {
@@ -224,7 +221,7 @@ class Activity(enum.Enum):
 # member straight into the builder and its ``.value`` becomes activity_id (and
 # feeds type_uid). Named ``...Action`` (not ``Activity``) to avoid clashing with
 # the generated model class names (ApiActivity, WebResourcesActivity, ...).
-# Values are fixed by the OCSF 1.1.0 spec for each class.
+# Values are fixed by the OCSF spec for each class.
 class AuthAction(enum.IntEnum):
     """Authentication (3002) activity_id."""
 

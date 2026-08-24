@@ -1,6 +1,6 @@
 # ocsf-emitter
 
-Construct, validate, and emit **OCSF 1.1.0** events with a consistent shape and
+Construct, validate, and emit **OCSF 1.5.0** events with a consistent shape and
 mandatory runtime validation. Supports eight classes: Detection Finding (2004),
 Compliance Finding (2003), Authentication (3002), Account Change (3001),
 Operating System Patch State (5004), API Activity (6003), Web Resources Activity
@@ -20,10 +20,9 @@ class table and examples.
 ## Install
 
 ```bash
-uv pip install -e .                  # runtime: pydantic only
-uv pip install -e ".[securitylake]"  # + pyarrow, for the Parquet writer
-uv pip install -e ".[dev]"           # + mypy, pytest, ruff (and pyarrow)
-uv pip install -e ".[codegen]"       # + tools to regenerate the OCSF models
+uv pip install -e .              # runtime: pydantic only
+uv pip install -e ".[codegen]"   # + tools to regenerate the OCSF models
+uv sync                          # dev + docs groups (mypy, pytest, ruff, jsonschema, mkdocs)
 ```
 
 ## Usage
@@ -107,12 +106,12 @@ schema-generation for two reasons:
 
 ### How the pinned version is generated
 
-We must pin an **older** OCSF version (1.1.0 -- see Security Lake below), and
-the OCSF JSON Schema HTTP endpoint only serves the *latest* deployed version. So
-`scripts/gen_models.py`:
+We pin an exact OCSF version and generate models from its **metaschema** (the
+JSON Schema HTTP endpoint only serves the *latest* deployed version, so we don't
+use it for codegen). `scripts/gen_models.py`:
 
 1. Fetches the pinned version's **metaschema** with `ocsf-lib`
-   (`OcsfApiClient().get_schema("1.1.0")`) -- this works for any version.
+   (`OcsfApiClient().get_schema("1.5.0")`) -- this works for any version.
 2. Converts that metaschema (every class in `ROOT_CLASSES` plus the **union** of
    their transitive object closures) into a self-contained draft **JSON Schema**,
    where each root class and shared object is a `$def` so codegen emits one
@@ -124,21 +123,18 @@ the OCSF JSON Schema HTTP endpoint only serves the *latest* deployed version. So
 
 ## Bumping the OCSF schema version
 
-> **Before bumping:** if you ship to AWS Security Lake, confirm the target
-> version is one Security Lake accepts (see below). The CI `aws-validation` job
-> is a hard gate and will fail for unsupported versions.
-
 1. Regenerate the models for the desired version:
 
    ```bash
-   uv run --extra codegen python scripts/gen_models.py 1.1.0
+   uv run --extra codegen python scripts/gen_models.py 1.5.0
    ```
 
 2. Update the **one-line** pin in
-   [`src/ocsf_emitter/defaults.py`](src/ocsf_emitter/defaults.py) to match:
+   [`src/ocsf_emitter/defaults.py`](src/ocsf_emitter/defaults.py) to match
+   (keep `DEFAULT_VERSION` in `scripts/gen_models.py` in sync):
 
    ```python
-   OCSF_SCHEMA_VERSION = "1.1.0"   # <- change this
+   OCSF_SCHEMA_VERSION = "1.5.0"   # <- change this
    ```
 
 3. Run the suite and review the golden diff:
@@ -152,50 +148,21 @@ the OCSF JSON Schema HTTP endpoint only serves the *latest* deployed version. So
    version may reintroduce `RootModel`/union wrappers on some objects, which
    would require builder adjustments.
 
-## AWS Security Lake compatibility
+## OCSF schema conformance
 
-This package targets **AWS Security Lake custom-source** ingestion.
-
-**Version.** Security Lake custom sources accept OCSF **1.1.0 / 1.0.0-rc.2**, and
-the [AWS OCSF validation tool](https://github.com/aws-samples/amazon-security-lake-ocsf-validation)
-maps `detection_finding` only under **1.1.0**. We therefore pin **1.1.0**
-(not a newer version). To keep findings acceptable, the builder also stamps the
-sibling label fields Security Lake expects: `class_name` (`"Detection Finding"`)
-and `category_name` (`"Findings"`).
-
-**Validation is proven against AWS's own tool.** CI runs that tool against an
-emitted finding as a **blocking** job
-([`.github/workflows/ci.yml`](.github/workflows/ci.yml)), pinned at a known
-commit. Locally:
+Beyond the library's own runtime `validate()` (Pydantic + registry invariants),
+CI validates one emitted event **per supported class** against a JSON Schema
+built from the OCSF **metaschema** (via `ocsf-lib`) for the pinned version -- the
+same authoritative source the models are generated from. This is a **blocking**
+job ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) and is self-contained
+-- no third-party validator. Run it locally:
 
 ```bash
-git clone https://github.com/aws-samples/amazon-security-lake-ocsf-validation.git /tmp/aws-ocsf
-uv pip install -e ".[securitylake]" && uv pip install -r /tmp/aws-ocsf/requirements.txt pytest
-OCSF_AWS_VALIDATION_DIR=/tmp/aws-ocsf uv run pytest tests/test_integ_aws_validation.py -v
+OCSF_SCHEMA_VALIDATION=1 uv run pytest tests/test_integ_ocsf_schema.py -v
 ```
 
-**Parquet packaging.** Security Lake wants **Parquet** objects (not JSON),
-zstd-compressed, partitioned in S3 and sorted by time. The optional
-`ocsf_emitter.securitylake` module (install the `securitylake` extra) does this
-without touching S3 -- you upload the returned bytes at the returned key:
-
-```python
-from ocsf_emitter import securitylake as sl
-
-obj = sl.build_parquet_object(
-    findings,                       # a batch of built findings
-    source_location="my_detector",  # the prefix Security Lake assigned you
-    region="us-east-1",
-    account_id="123456789012",
-    object_name="batch-001",
-)
-# obj.key  -> ext/my_detector/region=us-east-1/accountId=.../eventDay=YYYYMMDD/batch-001.parquet
-# obj.data -> Parquet bytes (zstd); upload to your Security Lake S3 bucket at obj.key
-```
-
-The writer validates every finding (via `emit`), sorts records by `time`, uses
-zstd compression, and bounds data-page (<=1 MB) and row-group sizes per the
-Security Lake custom-source requirements.
+Without `OCSF_SCHEMA_VALIDATION=1` the test is skipped (it fetches the metaschema
+over the network).
 
 ## Product identity
 
@@ -220,13 +187,12 @@ src/ocsf_emitter/
   defaults.py     schema-version pin, metadata/product, severity/status/... mappings
   validate.py     runtime validation; raises InvalidFindingError
   emit.py         serialize to JSON dict/str (transport-agnostic)
-  securitylake.py OCSF -> Parquet for AWS Security Lake (needs [securitylake] extra)
   errors.py       OcsfEmitterError, InvalidFindingError
   _models.py      GENERATED OCSF Pydantic models (do not edit by hand)
 scripts/gen_models.py   regenerate _models.py (metaschema -> JSON Schema -> Pydantic)
-tests/                  mappings, builder/emit, validation-rejection, golden, parquet
-tests/test_integ_aws_validation.py   runs the AWS OCSF validation tool (CI-gated)
-.github/workflows/ci.yml              unit job + blocking AWS-validation job
+tests/                  mappings, builder/emit, validation-rejection, golden, multiclass
+tests/test_integ_ocsf_schema.py   validates emitted events vs the OCSF JSON Schema (CI-gated)
+.github/workflows/ci.yml           unit job + blocking OCSF-schema-conformance job
 ```
 
 ## Development

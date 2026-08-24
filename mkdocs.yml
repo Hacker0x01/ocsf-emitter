@@ -1,5 +1,5 @@
 site_name: ocsf-emitter
-site_description: Construct, validate, and emit OCSF 1.1.0 events across supported classes (Detection Finding, Authentication, File Hosting Activity, and more)
+site_description: Construct, validate, and emit OCSF 1.5.0 events across supported classes (Detection Finding, Authentication, File Hosting Activity, and more)
 # Update these if the repository lives under a different owner/name.
 site_url: https://hacker0x01.github.io/ocsf-emitter/
 repo_url: https://github.com/Hacker0x01/ocsf-emitter
@@ -75,14 +75,12 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Usage guide: usage.md
-  - AWS Security Lake: security-lake.md
   - API reference:
       - Builders: api/builders.md
       - Domain types: api/domain.md
       - Defaults & mappings: api/defaults.md
       - Validation: api/validate.md
       - Emit: api/emit.md
-      - Security Lake: api/securitylake.md
       - Errors: api/errors.md
 
 extra:
