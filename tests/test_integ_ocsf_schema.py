@@ -1,11 +1,13 @@
 """Integration test: validate emitted events against the official OCSF schema.
 
-For each supported class this builds one event, emits it, fetches that class's
-JSON Schema from ``schema.ocsf.io`` for the pinned OCSF version (matching the
-event's ``metadata.profiles``), and validates the payload with ``jsonschema``.
-This is a self-contained conformance check -- no third-party validator.
+For each supported class this builds one event, emits it, and validates the
+payload against a JSON Schema derived from the OCSF **metaschema** for the pinned
+version -- the same authoritative source ``scripts/gen_models.py`` generates the
+models from (fetched via ``ocsf-lib``). This is a self-contained conformance
+check: it does not depend on the ``schema.ocsf.io/.../classes/<name>`` endpoint,
+which is slow and frequently unavailable.
 
-It needs network access to fetch schemas, so it is skipped unless
+It fetches the metaschema over the network, so it is skipped unless
 ``OCSF_SCHEMA_VALIDATION=1`` is set (the CI ``ocsf-schema-validation`` job sets
 it). Run locally with:
 
@@ -14,12 +16,8 @@ it). Run locally with:
 
 from __future__ import annotations
 
-import json
+import functools
 import os
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
 from typing import Any
 
 import jsonschema
@@ -51,11 +49,11 @@ from ocsf_emitter import (
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("OCSF_SCHEMA_VALIDATION") != "1",
-    reason="Set OCSF_SCHEMA_VALIDATION=1 to fetch OCSF schemas and run this test.",
+    reason="Set OCSF_SCHEMA_VALIDATION=1 to fetch the OCSF metaschema and run this test.",
 )
 
-# metaschema key (== schema.ocsf.io URL segment) per supported class.
-_URL_BY_CLASS_UID = {
+# metaschema class key (== ROOT_CLASSES in gen_models) per supported class_uid.
+_ROOT_KEY_BY_CLASS_UID = {
     2004: "detection_finding",
     2003: "compliance_finding",
     3002: "authentication",
@@ -150,50 +148,32 @@ def _payloads() -> dict[str, dict[str, Any]]:
     }
 
 
-# Cache fetched schemas for the process so re-runs and shared profiles don't
-# re-hit the (slow) schema server.
-_SCHEMA_CACHE: dict[str, dict[str, Any]] = {}
-_FETCH_ATTEMPTS = 5
-_FETCH_TIMEOUT_S = 45
+@functools.cache
+def _class_schemas() -> dict[str, dict[str, Any]]:
+    """Build one self-contained JSON Schema per supported class from the metaschema.
+
+    Fetches the OCSF metaschema once via ``ocsf-lib`` and converts the union of
+    all root classes with ``scripts/gen_models.py`` (the same code that generates
+    the models). Each class's ``$def`` is returned as a standalone schema carrying
+    the shared ``$defs`` so ``#/$defs/...`` refs resolve. Cached for the session.
+    """
+    from ocsf.api import OcsfApiClient
+    from scripts.gen_models import metaschema_to_json_schema
+
+    schema = OcsfApiClient().get_schema(OCSF_SCHEMA_VERSION)
+    roots = list(_ROOT_KEY_BY_CLASS_UID.values())
+    doc = metaschema_to_json_schema(schema, roots)
+    defs: dict[str, Any] = doc["$defs"]
+    return {key: {**defs[key], "$defs": defs} for key in roots}
 
 
-def _fetch_schema(url_class: str, profiles: list[str]) -> dict[str, Any]:
-    prof = ",".join(profiles)
-    url = (
-        f"https://schema.ocsf.io/schema/{OCSF_SCHEMA_VERSION}/classes/"
-        f"{url_class}?profiles={urllib.parse.quote(prof)}"
-    )
-    if url in _SCHEMA_CACHE:
-        return _SCHEMA_CACHE[url]
-
-    # schema.ocsf.io is slow and occasionally times out; retry with backoff so a
-    # transient failure doesn't fail the gate.
-    last_exc: Exception | None = None
-    for attempt in range(_FETCH_ATTEMPTS):
-        try:
-            with urllib.request.urlopen(url, timeout=_FETCH_TIMEOUT_S) as resp:  # noqa: S310
-                schema: dict[str, Any] = json.loads(resp.read())
-            _SCHEMA_CACHE[url] = schema
-            return schema
-        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
-            last_exc = exc
-            if attempt < _FETCH_ATTEMPTS - 1:
-                time.sleep(2 * (attempt + 1))
-    raise RuntimeError(f"Could not fetch OCSF schema after {_FETCH_ATTEMPTS} tries: {url}") from (
-        last_exc
-    )
-
-
-@pytest.mark.parametrize("class_name", list(_payloads()))
+@pytest.mark.parametrize("class_name", list(_ROOT_KEY_BY_CLASS_UID.values()))
 def test_emitted_event_conforms_to_ocsf_schema(class_name: str) -> None:
     payload = _payloads()[class_name]
-    class_uid = int(payload["class_uid"])
-    metadata: dict[str, Any] = payload.get("metadata", {})
-    profiles: list[str] = list(metadata.get("profiles", []))
-    schema = _fetch_schema(_URL_BY_CLASS_UID[class_uid], profiles)
+    schema = _class_schemas()[class_name]
 
     errors = sorted(
-        jsonschema.Draft7Validator(schema).iter_errors(payload),
+        jsonschema.Draft202012Validator(schema).iter_errors(payload),
         key=lambda e: list(e.absolute_path),
     )
     assert not errors, "OCSF schema validation failed for {}:\n{}".format(

@@ -151,17 +151,18 @@ use it for codegen). `scripts/gen_models.py`:
 ## OCSF schema conformance
 
 Beyond the library's own runtime `validate()` (Pydantic + registry invariants),
-CI validates one emitted event **per supported class** against the official OCSF
-JSON Schema fetched from `schema.ocsf.io` for the pinned version. This is a
-**blocking** job ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) and is
-self-contained -- no third-party validator. Run it locally:
+CI validates one emitted event **per supported class** against a JSON Schema
+built from the OCSF **metaschema** (via `ocsf-lib`) for the pinned version -- the
+same authoritative source the models are generated from. This is a **blocking**
+job ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) and is self-contained
+-- no third-party validator. Run it locally:
 
 ```bash
 OCSF_SCHEMA_VALIDATION=1 uv run pytest tests/test_integ_ocsf_schema.py -v
 ```
 
-Without `OCSF_SCHEMA_VALIDATION=1` the test is skipped (it needs network access
-to fetch the schemas).
+Without `OCSF_SCHEMA_VALIDATION=1` the test is skipped (it fetches the metaschema
+over the network).
 
 ## Product identity
 

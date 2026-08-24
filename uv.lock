@@ -804,6 +804,7 @@ codegen = [
 dev = [
     { name = "jsonschema" },
     { name = "mypy" },
+    { name = "ocsf-lib" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -825,6 +826,7 @@ provides-extras = ["codegen"]
 dev = [
     { name = "jsonschema", specifier = ">=4.19" },
     { name = "mypy", specifier = ">=1.9" },
+    { name = "ocsf-lib", specifier = ">=0.10,<1" },
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.4" },
 ]

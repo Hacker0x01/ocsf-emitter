@@ -41,8 +41,10 @@ dev = [
     "mypy>=1.9",
     "pytest>=8",
     "ruff>=0.4",
-    # Used by the OCSF-schema conformance test (tests/test_integ_ocsf_schema.py).
+    # Used by the OCSF-schema conformance test (tests/test_integ_ocsf_schema.py):
+    # jsonschema validates; ocsf-lib supplies the metaschema the schema is built from.
     "jsonschema>=4.19",
+    "ocsf-lib>=0.10,<1",
 ]
 docs = [
     "mkdocs>=1.6",
@@ -91,7 +93,7 @@ module = "ocsf_emitter._models"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = ["jsonschema.*"]
+module = ["jsonschema.*", "ocsf.*", "scripts.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

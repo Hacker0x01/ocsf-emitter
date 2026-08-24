@@ -41,9 +41,9 @@ uv run pytest -q --ignore=tests/test_integ_ocsf_schema.py   # unit tests
 ## Running the OCSF schema conformance test
 
 The integration test in `tests/test_integ_ocsf_schema.py` validates one emitted
-event per supported class against the official OCSF JSON Schema fetched from
-`schema.ocsf.io` for the pinned version. It is skipped unless
-`OCSF_SCHEMA_VALIDATION=1` is set (it needs network access):
+event per supported class against a JSON Schema built from the OCSF metaschema
+(via `ocsf-lib`) for the pinned version. It is skipped unless
+`OCSF_SCHEMA_VALIDATION=1` is set (it fetches the metaschema over the network):
 
 ```bash
 OCSF_SCHEMA_VALIDATION=1 uv run pytest tests/test_integ_ocsf_schema.py -v
