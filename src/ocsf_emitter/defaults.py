@@ -1,7 +1,9 @@
-"""Consistent defaults and enum mappings for OCSF Detection Findings.
+"""Consistent defaults, the class registry, and enum mappings for OCSF events.
 
 Everything version- or product-specific lives here, so that pinning/bumping the
-OCSF schema version and adjusting our house defaults is a one-file change.
+OCSF schema version and adjusting our house defaults is a one-file change. The
+per-class identity registry and activity vocabularies come from the generated
+``_catalog`` module.
 """
 
 from __future__ import annotations

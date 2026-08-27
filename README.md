@@ -181,17 +181,19 @@ unattributed finding.
 
 ```
 src/ocsf_emitter/
-  __init__.py     public API: build_detection_finding, build_from_signal, emit, ...
-  domain.py       our domain shapes: DetectionSignal, Observable, MitreAttack, enums
-  builders.py     domain signal  ->  OCSF DetectionFinding
-  defaults.py     schema-version pin, metadata/product, severity/status/... mappings
-  validate.py     runtime validation; raises InvalidFindingError
+  __init__.py     public API: build_* per class, emit, validate, OcsfClass, refs, ...
+  domain.py       our domain input shapes: DetectionSignal, Observable, *Ref, enums
+  builders.py     domain refs -> OCSF models; one typed build_* per class
+  defaults.py     schema-version pin, metadata/product, severity/status/... mappings, registry
+  validate.py     runtime validation; raises InvalidFindingError; SupportedEvent union
   emit.py         serialize to JSON dict/str (transport-agnostic)
   errors.py       OcsfEmitterError, InvalidFindingError
   _models.py      GENERATED OCSF Pydantic models (do not edit by hand)
-scripts/gen_models.py   regenerate _models.py (metaschema -> JSON Schema -> Pydantic)
-tests/                  mappings, builder/emit, validation-rejection, golden, multiclass
-tests/test_integ_ocsf_schema.py   validates emitted events vs the OCSF JSON Schema (CI-gated)
+  _catalog.py     GENERATED class catalog: OcsfClass, registry, per-class *Action enums
+scripts/gen_models.py   regenerate _models.py + _catalog.py (metaschema -> JSON Schema -> Pydantic)
+tests/examples.py       one example build per class, shared by the test suites
+tests/                  mappings, builder/emit, validation-rejection, golden, all-classes
+tests/test_integ_ocsf_schema.py   validates every class vs the OCSF metaschema (CI-gated)
 .github/workflows/ci.yml           unit job + blocking OCSF-schema-conformance job
 ```
 
