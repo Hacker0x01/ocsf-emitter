@@ -157,8 +157,8 @@ def test_pinned_version_matches_target() -> None:
 def test_invalid_type_uid_rejected(fixed_clock: Callable[[], int]) -> None:
     """type_uid inconsistent with activity_id must be caught by invariant check."""
     finding = _build(fixed_clock)
-    # Valid enum member, but wrong for activity CREATE (expects 200401).
-    finding.type_uid = ocsf_emitter.models.TypeUid(200402)
+    # A different valid type_uid, but wrong for activity CREATE (expects 200401).
+    object.__setattr__(finding, "type_uid", 200402)
     with pytest.raises(InvalidFindingError) as excinfo:
         validate(finding)
     assert any("type_uid" in fe for fe in excinfo.value.field_errors)

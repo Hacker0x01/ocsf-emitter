@@ -53,35 +53,118 @@ integers by the functions in [`defaults`](api/defaults.md).
 
 ## Supported OCSF classes
 
-Beyond Detection Finding, the library builds/validates/emits the OCSF classes
-below (all OCSF 1.5.0). Each has a dedicated builder with the same keyword shape
-(`severity`, `message`, `time_ms`, `product`, `clock`) plus that class's
-required objects. `emit`/`validate` accept any of them.
+The library builds/validates/emits **all 53 base OCSF 1.5.0 classes** across all
+eight categories. Each has a dedicated `build_*` builder sharing the same keyword
+shape (`severity`, `activity`, `message`, `time_ms`, `observables`, `product`,
+`clock`) plus that class's required OCSF objects. `emit`/`validate` accept any of
+them.
 
-| Class | `class_uid` | Category | Builder | Required input |
-| --- | --- | --- | --- | --- |
-| Detection Finding | 2004 | Findings | [`build_detection_finding`][ocsf_emitter.builders.build_detection_finding] | `title`, `severity`, `message` |
-| Compliance Finding | 2003 | Findings | [`build_compliance_finding`][ocsf_emitter.builders.build_compliance_finding] | `title`, `compliance` (a `ComplianceRef`) |
-| Authentication | 3002 | Identity & Access Management | [`build_authentication`][ocsf_emitter.builders.build_authentication] | `user` (a `UserRef`) |
-| Account Change | 3001 | Identity & Access Management | [`build_account_change`][ocsf_emitter.builders.build_account_change] | `user` |
-| Operating System Patch State | 5004 | Discovery | [`build_patch_state`][ocsf_emitter.builders.build_patch_state] | `device` (a `DeviceRef` with an `os_*` field) |
-| API Activity | 6003 | Application Activity | [`build_api_activity`][ocsf_emitter.builders.build_api_activity] | `api` (an `ApiCall`) |
-| Web Resources Activity | 6001 | Application Activity | [`build_web_resources_activity`][ocsf_emitter.builders.build_web_resources_activity] | `web_resources` (a list of `WebResourceRef`) |
-| File Hosting Activity | 6006 | Application Activity | [`build_file_hosting`][ocsf_emitter.builders.build_file_hosting] | `file` (a `FileRef`) |
-
-Each class carries its own activity vocabulary
-([`AuthAction`][ocsf_emitter.defaults.AuthAction],
-[`FileHostingAction`][ocsf_emitter.defaults.FileHostingAction], …); the shared
+Each class carries its own activity vocabulary generated from the OCSF schema and
+named `<ModelClass>Action` (e.g. `AuthenticationAction`, `FileHostingAction`,
+`NetworkActivityAction`); the shared
 [`Activity`][ocsf_emitter.defaults.Activity] (Create/Update/Close) covers the two
-Findings classes. The class registry
-([`OcsfClass`][ocsf_emitter.defaults.OcsfClass],
+Findings builders `build_detection_finding` / `build_compliance_finding`. The
+class registry (`OcsfClass`,
 [`class_spec`][ocsf_emitter.defaults.class_spec]) is the single source of truth
 for each class's `class_uid`/`category_uid` and name siblings.
+
+**System Activity [1]**
+
+| Class | `class_uid` | Builder |
+| --- | --- | --- |
+| File System Activity | 1001 | `build_file_activity` |
+| Kernel Extension Activity | 1002 | `build_kernel_extension_activity` |
+| Kernel Activity | 1003 | `build_kernel_activity` |
+| Memory Activity | 1004 | `build_memory_activity` |
+| Module Activity | 1005 | `build_module_activity` |
+| Scheduled Job Activity | 1006 | `build_scheduled_job_activity` |
+| Process Activity | 1007 | `build_process_activity` |
+| Event Log Activity | 1008 | `build_event_log_activity` |
+| Script Activity | 1009 | `build_script_activity` |
+
+**Findings [2]**
+
+| Class | `class_uid` | Builder |
+| --- | --- | --- |
+| Vulnerability Finding | 2002 | `build_vulnerability_finding` |
+| Compliance Finding | 2003 | `build_compliance_finding` |
+| Detection Finding | 2004 | `build_detection_finding` |
+| Incident Finding | 2005 | `build_incident_finding` |
+| Data Security Finding | 2006 | `build_data_security_finding` |
+| Application Security Posture Finding | 2007 | `build_application_security_posture_finding` |
+
+**Identity & Access Management [3]**
+
+| Class | `class_uid` | Builder |
+| --- | --- | --- |
+| Account Change | 3001 | `build_account_change` |
+| Authentication | 3002 | `build_authentication` |
+| Authorize Session | 3003 | `build_authorize_session` |
+| Entity Management | 3004 | `build_entity_management` |
+| User Access Management | 3005 | `build_user_access` |
+| Group Management | 3006 | `build_group_management` |
+
+**Network Activity [4]**
+
+| Class | `class_uid` | Builder |
+| --- | --- | --- |
+| Network Activity | 4001 | `build_network_activity` |
+| HTTP Activity | 4002 | `build_http_activity` |
+| DNS Activity | 4003 | `build_dns_activity` |
+| DHCP Activity | 4004 | `build_dhcp_activity` |
+| RDP Activity | 4005 | `build_rdp_activity` |
+| SMB Activity | 4006 | `build_smb_activity` |
+| SSH Activity | 4007 | `build_ssh_activity` |
+| FTP Activity | 4008 | `build_ftp_activity` |
+| Email Activity | 4009 | `build_email_activity` |
+| NTP Activity | 4013 | `build_ntp_activity` |
+| Tunnel Activity | 4014 | `build_tunnel_activity` |
+
+**Discovery [5]**
+
+| Class | `class_uid` | Builder |
+| --- | --- | --- |
+| Device Inventory Info | 5001 | `build_inventory_info` |
+| User Inventory Info | 5003 | `build_user_inventory` |
+| Operating System Patch State | 5004 | `build_patch_state` |
+| Device Config State Change | 5019 | `build_device_config_state_change` |
+| Software Inventory Info | 5020 | `build_software_info` |
+| OSINT Inventory Info | 5021 | `build_osint_inventory_info` |
+| Cloud Resources Inventory Info | 5023 | `build_cloud_resources_inventory_info` |
+| Live Evidence Info | 5040 | `build_evidence_info` |
+
+**Application Activity [6]**
+
+| Class | `class_uid` | Builder |
+| --- | --- | --- |
+| Web Resources Activity | 6001 | `build_web_resources_activity` |
+| Application Lifecycle | 6002 | `build_application_lifecycle` |
+| API Activity | 6003 | `build_api_activity` |
+| Datastore Activity | 6005 | `build_datastore_activity` |
+| File Hosting Activity | 6006 | `build_file_hosting` |
+| Scan Activity | 6007 | `build_scan_activity` |
+| Application Error | 6008 | `build_application_error` |
+
+**Remediation [7]**
+
+| Class | `class_uid` | Builder |
+| --- | --- | --- |
+| Remediation Activity | 7001 | `build_remediation_activity` |
+| File Remediation Activity | 7002 | `build_file_remediation_activity` |
+| Process Remediation Activity | 7003 | `build_process_remediation_activity` |
+| Network Remediation Activity | 7004 | `build_network_remediation_activity` |
+
+**Unmanned Systems [8]**
+
+| Class | `class_uid` | Builder |
+| --- | --- | --- |
+| Drone Flights Activity | 8001 | `build_drone_flights_activity` |
+| Airborne Broadcast Activity | 8002 | `build_airborne_broadcast_activity` |
 
 ```python
 from ocsf_emitter import (
     build_file_hosting, build_authentication,
-    FileRef, UserRef, EndpointRef, Severity, FileHostingAction, AuthAction,
+    FileRef, UserRef, EndpointRef, Severity, FileHostingAction, AuthenticationAction,
 )
 
 # Slack file share -> File Hosting Activity (6006)
@@ -96,7 +179,7 @@ share = build_file_hosting(
 logon = build_authentication(
     user=UserRef(name="alice", email="alice@example.com"),
     severity=Severity.LOW,
-    activity=AuthAction.LOGON,
+    activity=AuthenticationAction.LOGON,
     dst_endpoint=EndpointRef(hostname="sso.example.com"),
 )
 ```

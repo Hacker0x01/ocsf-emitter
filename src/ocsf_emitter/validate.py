@@ -16,22 +16,11 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from . import _models as _m
 from . import defaults
+from ._catalog import SupportedEvent
 from .errors import InvalidFindingError
 
-# The OCSF classes this library builds/validates/emits. Kept as a Union so type
-# checkers accept any supported event where an "event" is expected.
-SupportedEvent = (
-    _m.DetectionFinding
-    | _m.ComplianceFinding
-    | _m.Authentication
-    | _m.AccountChange
-    | _m.PatchState
-    | _m.ApiActivity
-    | _m.WebResourcesActivity
-    | _m.FileHosting
-)
+__all__ = ["SupportedEvent", "validate"]
 
 
 def validate(finding: SupportedEvent) -> SupportedEvent:

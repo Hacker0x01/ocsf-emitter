@@ -9,6 +9,7 @@ from __future__ import annotations
 import enum
 from dataclasses import dataclass
 
+from . import _catalog
 from . import _models as _m
 
 # --------------------------------------------------------------------------- #
@@ -44,67 +45,41 @@ CATEGORY_NAME = "Findings"
 # --------------------------------------------------------------------------- #
 # Supported OCSF classes and their identity registry.
 #
-# The library builds/validates/emits each class below. Every class's identity
-# (class_uid, category_uid, and the sibling name fields) lives here so adding a
-# class is a registry entry plus a builder. Keep ``ROOT_CLASSES`` in
-# ``scripts/gen_models.py`` in sync with the keys here.
+# The class list, identity, and per-class activity enums are GENERATED into
+# ``_catalog`` from the OCSF metaschema (see ``scripts/gen_models.py``); we build
+# typed ``ClassSpec`` objects from it here. Adding/removing a class is a
+# ``ROOT_CLASSES`` change + regeneration, then a builder.
 # --------------------------------------------------------------------------- #
-class OcsfClass(enum.Enum):
-    """The OCSF classes this library supports, keyed by metaschema name."""
-
-    DETECTION_FINDING = "detection_finding"
-    COMPLIANCE_FINDING = "compliance_finding"
-    AUTHENTICATION = "authentication"
-    ACCOUNT_CHANGE = "account_change"
-    PATCH_STATE = "patch_state"
-    API_ACTIVITY = "api_activity"
-    WEB_RESOURCES_ACTIVITY = "web_resources_activity"
-    FILE_HOSTING = "file_hosting"
+OcsfClass = _catalog.OcsfClass
 
 
 @dataclass(frozen=True, slots=True)
 class ClassSpec:
-    """Fixed OCSF identity for one class (uids + sibling name fields)."""
+    """Fixed OCSF identity for one class (uids, sibling name fields, model, activity)."""
 
     ocsf_class: OcsfClass
     class_uid: int
     category_uid: int
     class_name: str
     category_name: str
+    model_name: str
+    action: type[enum.IntEnum]
 
     def type_uid(self, activity_id_value: int) -> int:
         """OCSF ``type_uid`` = class_uid * 100 + activity_id."""
         return self.class_uid * 100 + activity_id_value
 
 
-# Category name siblings, per the OCSF categories:
-#   Findings (2), Identity & Access Management (3), Discovery (5),
-#   Application Activity (6).
 _CLASS_REGISTRY: dict[OcsfClass, ClassSpec] = {
-    OcsfClass.DETECTION_FINDING: ClassSpec(
-        OcsfClass.DETECTION_FINDING, 2004, 2, "Detection Finding", "Findings"
-    ),
-    OcsfClass.COMPLIANCE_FINDING: ClassSpec(
-        OcsfClass.COMPLIANCE_FINDING, 2003, 2, "Compliance Finding", "Findings"
-    ),
-    OcsfClass.AUTHENTICATION: ClassSpec(
-        OcsfClass.AUTHENTICATION, 3002, 3, "Authentication", "Identity & Access Management"
-    ),
-    OcsfClass.ACCOUNT_CHANGE: ClassSpec(
-        OcsfClass.ACCOUNT_CHANGE, 3001, 3, "Account Change", "Identity & Access Management"
-    ),
-    OcsfClass.PATCH_STATE: ClassSpec(
-        OcsfClass.PATCH_STATE, 5004, 5, "Operating System Patch State", "Discovery"
-    ),
-    OcsfClass.API_ACTIVITY: ClassSpec(
-        OcsfClass.API_ACTIVITY, 6003, 6, "API Activity", "Application Activity"
-    ),
-    OcsfClass.WEB_RESOURCES_ACTIVITY: ClassSpec(
-        OcsfClass.WEB_RESOURCES_ACTIVITY, 6001, 6, "Web Resources Activity", "Application Activity"
-    ),
-    OcsfClass.FILE_HOSTING: ClassSpec(
-        OcsfClass.FILE_HOSTING, 6006, 6, "File Hosting Activity", "Application Activity"
-    ),
+    oc: ClassSpec(oc, uid, cat_uid, class_name, cat_name, model_name, action)
+    for oc, (
+        uid,
+        cat_uid,
+        class_name,
+        cat_name,
+        model_name,
+        action,
+    ) in _catalog.CLASS_REGISTRY.items()
 }
 
 # Reverse index for validation (look a finding's class up by its class_uid int).
@@ -216,98 +191,10 @@ class Activity(enum.Enum):
     CLOSE = "close"
 
 
-# Per-class action enums for the non-Findings classes. Each is an IntEnum whose
-# *value is the OCSF activity_id*, so no name->id table is needed: pass the
-# member straight into the builder and its ``.value`` becomes activity_id (and
-# feeds type_uid). Named ``...Action`` (not ``Activity``) to avoid clashing with
-# the generated model class names (ApiActivity, WebResourcesActivity, ...).
-# Values are fixed by the OCSF spec for each class.
-class AuthAction(enum.IntEnum):
-    """Authentication (3002) activity_id."""
-
-    UNKNOWN = 0
-    LOGON = 1
-    LOGOFF = 2
-    AUTHENTICATION_TICKET = 3
-    SERVICE_TICKET_REQUEST = 4
-    SERVICE_TICKET_RENEW = 5
-    OTHER = 99
-
-
-class AccountChangeAction(enum.IntEnum):
-    """Account Change (3001) activity_id."""
-
-    UNKNOWN = 0
-    CREATE = 1
-    ENABLE = 2
-    PASSWORD_CHANGE = 3
-    PASSWORD_RESET = 4
-    DISABLE = 5
-    DELETE = 6
-    ATTACH_POLICY = 7
-    DETACH_POLICY = 8
-    LOCK = 9
-    MFA_FACTOR_ENABLE = 10
-    MFA_FACTOR_DISABLE = 11
-    OTHER = 99
-
-
-class PatchStateAction(enum.IntEnum):
-    """Operating System Patch State (5004) activity_id."""
-
-    UNKNOWN = 0
-    LOG = 1
-    COLLECT = 2
-    OTHER = 99
-
-
-class ApiAction(enum.IntEnum):
-    """API Activity (6003) activity_id."""
-
-    UNKNOWN = 0
-    CREATE = 1
-    READ = 2
-    UPDATE = 3
-    DELETE = 4
-    OTHER = 99
-
-
-class WebResourceAction(enum.IntEnum):
-    """Web Resources Activity (6001) activity_id."""
-
-    UNKNOWN = 0
-    CREATE = 1
-    READ = 2
-    UPDATE = 3
-    DELETE = 4
-    SEARCH = 5
-    IMPORT = 6
-    EXPORT = 7
-    SHARE = 8
-    OTHER = 99
-
-
-class FileHostingAction(enum.IntEnum):
-    """File Hosting Activity (6006) activity_id."""
-
-    UNKNOWN = 0
-    UPLOAD = 1
-    DOWNLOAD = 2
-    UPDATE = 3
-    DELETE = 4
-    RENAME = 5
-    COPY = 6
-    MOVE = 7
-    RESTORE = 8
-    PREVIEW = 9
-    LOCK = 10
-    UNLOCK = 11
-    SHARE = 12
-    UNSHARE = 13
-    OPEN = 14
-    SYNC = 15
-    UNSYNC = 16
-    OTHER = 99
+# Per-class activity vocabularies (one IntEnum per class, value == OCSF
+# activity_id) are GENERATED into ``_catalog`` from the metaschema and named
+# ``<ModelClass>Action`` (e.g. ``AuthenticationAction``, ``FileActivityAction``).
+# Import them from ``ocsf_emitter`` or ``ocsf_emitter._catalog``.
 
 
 class Confidence(enum.Enum):
@@ -376,58 +263,59 @@ _RISK_LEVEL_TO_ID: dict[RiskLevel, int] = {
 }
 
 
-def severity_id(severity: Severity) -> _m.SeverityId:
-    """Map our Severity enum to an OCSF severity_id enum member."""
-    return _m.SeverityId(_SEVERITY_TO_ID[severity])
+# The generated model uses a *distinct* IntEnum type per class (ClassUid,
+# ClassUid1, StatusId, StatusId3, ...), so there is no single shared enum to
+# target. All of these mappers return **plain ints**; Pydantic coerces them into
+# whichever per-class enum the target model field expects. (Do NOT construct
+# ``_m.XxxId(...)`` -- those names are not stable across schema versions or class
+# ordering.)
+def severity_id(severity: Severity) -> int:
+    """Map our Severity enum to an OCSF severity_id int."""
+    return _SEVERITY_TO_ID[severity]
 
 
-def status_id(status: Status) -> _m.StatusId:
-    """Map our Status enum to an OCSF status_id enum member."""
-    return _m.StatusId(_STATUS_TO_ID[status])
+def status_id(status: Status) -> int:
+    """Map our Status enum to an OCSF status_id int."""
+    return _STATUS_TO_ID[status]
 
 
-def activity_id(activity: Activity) -> _m.ActivityId:
-    """Map our Activity enum to an OCSF activity_id enum member."""
-    return _m.ActivityId(_ACTIVITY_TO_ID[activity])
+def activity_id(activity: Activity) -> int:
+    """Map our Activity enum to an OCSF activity_id int."""
+    return _ACTIVITY_TO_ID[activity]
 
 
-def confidence_id(confidence: Confidence) -> _m.ConfidenceId:
-    """Map our Confidence enum to an OCSF confidence_id enum member."""
-    return _m.ConfidenceId(_CONFIDENCE_TO_ID[confidence])
+def confidence_id(confidence: Confidence) -> int:
+    """Map our Confidence enum to an OCSF confidence_id int."""
+    return _CONFIDENCE_TO_ID[confidence]
 
 
-def risk_level_id(risk_level: RiskLevel) -> _m.RiskLevelId:
-    """Map our RiskLevel enum to an OCSF risk_level_id enum member."""
-    return _m.RiskLevelId(_RISK_LEVEL_TO_ID[risk_level])
+def risk_level_id(risk_level: RiskLevel) -> int:
+    """Map our RiskLevel enum to an OCSF risk_level_id int."""
+    return _RISK_LEVEL_TO_ID[risk_level]
 
 
-def class_uid() -> _m.ClassUid:
-    """Return the OCSF class_uid enum member for Detection Finding (2004)."""
-    return _m.ClassUid(CLASS_UID)
+def class_uid() -> int:
+    """Return the Detection Finding class_uid (2004)."""
+    return CLASS_UID
 
 
-def category_uid() -> _m.CategoryUid:
-    """Return the OCSF category_uid enum member for Findings (2)."""
-    return _m.CategoryUid(CATEGORY_UID)
+def category_uid() -> int:
+    """Return the Findings category_uid (2)."""
+    return CATEGORY_UID
 
 
-def type_uid(activity: Activity) -> _m.TypeUid:
-    """Compute OCSF type_uid enum member = class_uid * 100 + activity_id."""
-    return _m.TypeUid(TYPE_UID_BASE + _ACTIVITY_TO_ID[activity])
+def type_uid(activity: Activity) -> int:
+    """Compute the Detection Finding type_uid = class_uid * 100 + activity_id."""
+    return TYPE_UID_BASE + _ACTIVITY_TO_ID[activity]
 
 
 def type_uid_int(activity: Activity) -> int:
-    """Return the integer type_uid value (for invariant checks/logging)."""
+    """Alias of :func:`type_uid` (kept for backward compatibility)."""
     return TYPE_UID_BASE + _ACTIVITY_TO_ID[activity]
 
 
 # --------------------------------------------------------------------------- #
-# Generic, class-agnostic identity helpers.
-#
-# The generated model uses a *distinct* IntEnum type per class (ClassUid,
-# ClassUid1, ...), so there is no single shared enum to target. These helpers
-# return plain ints; Pydantic coerces them into whichever per-class enum the
-# target model field expects. This is what the multi-class builders use.
+# Generic, class-agnostic identity helpers (also plain ints; see above).
 # --------------------------------------------------------------------------- #
 def class_identity(ocsf_class: OcsfClass) -> tuple[int, int, str, str]:
     """Return ``(class_uid, category_uid, class_name, category_name)`` for a class."""

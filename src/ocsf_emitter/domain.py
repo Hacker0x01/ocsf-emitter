@@ -158,6 +158,149 @@ class ComplianceRef:
     status: str | None = None
 
 
+# --------------------------------------------------------------------------- #
+# Domain refs for the wider class set. Each maps to an OCSF object; required
+# sub-fields are carried (``*_id`` default to 0/Unknown -- set them for real
+# events). Fields are the common-case subset, not every OCSF attribute.
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True, slots=True)
+class ProcessRef:
+    """A process. Maps to an OCSF ``process`` object (no required sub-fields)."""
+
+    name: str | None = None
+    pid: int | None = None
+    cmd_line: str | None = None
+    uid: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EmailRef:
+    """An email message. Maps to an OCSF ``email`` object (no required sub-fields)."""
+
+    from_addr: str | None = None
+    to: list[str] | None = None
+    subject: str | None = None
+    uid: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class VulnerabilityRef:
+    """A vulnerability. Maps to an OCSF ``vulnerability`` object (no required sub-fields)."""
+
+    title: str | None = None
+    severity: str | None = None
+    desc: str | None = None
+    cve_uid: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ConnectionInfoRef:
+    """A network connection. Maps to ``network_connection_info`` (requires ``direction_id``)."""
+
+    direction_id: int = 0
+    protocol_name: str | None = None
+    uid: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GroupRef:
+    """A group. Maps to an OCSF ``group`` object (no required sub-fields)."""
+
+    name: str | None = None
+    uid: str | None = None
+    type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class JobRef:
+    """A scheduled job. Maps to an OCSF ``job`` object (requires ``name`` and ``file``)."""
+
+    name: str
+    file: FileRef
+    cmd_line: str | None = None
+    desc: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class KernelRef:
+    """A kernel resource. Maps to an OCSF ``kernel`` object (requires ``name``, ``type_id``)."""
+
+    name: str
+    type_id: int = 0
+    path: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ModuleRef:
+    """A loaded module. Maps to an OCSF ``module`` object (requires ``load_type_id``)."""
+
+    load_type_id: int = 0
+    base_address: str | None = None
+    file: FileRef | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ScriptRef:
+    """A script. Maps to an OCSF ``script`` object (requires ``script_content``, ``type_id``)."""
+
+    script_content: str
+    type_id: int = 0
+    name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ScanRef:
+    """A scan. Maps to an OCSF ``scan`` object (requires ``type_id``)."""
+
+    type_id: int = 0
+    name: str | None = None
+    uid: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OsintRef:
+    """OSINT indicator. Maps to an OCSF ``osint`` object (requires ``type_id``, ``value``)."""
+
+    value: str
+    type_id: int = 0
+    desc: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ManagedEntityRef:
+    """A managed entity. Maps to an OCSF ``managed_entity`` object (no required sub-fields)."""
+
+    name: str | None = None
+    uid: str | None = None
+    type: str | None = None
+    type_id: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class QueryEvidenceRef:
+    """Live-evidence query result. Maps to ``query_evidence`` (requires ``query_type_id``)."""
+
+    query_type_id: int = 0
+    query_type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class KernelDriverRef:
+    """A kernel driver. Maps to an OCSF ``kernel_driver`` object (requires ``file``)."""
+
+    file: FileRef
+
+
+@dataclass(frozen=True, slots=True)
+class UasRef:
+    """An unmanned aerial system. Maps to ``unmanned_aerial_system`` (no required sub-fields)."""
+
+    uid: str | None = None
+    name: str | None = None
+    model: str | None = None
+    serial_number: str | None = None
+
+
 @dataclass(frozen=True, slots=True)
 class DetectionSignal:
     """A detection our services produce, in our own terms.

@@ -1,10 +1,8 @@
 # ocsf-emitter
 
 Construct, validate, and emit **OCSF 1.5.0** events with a consistent shape and
-mandatory runtime validation. Supports eight classes — Detection Finding (2004),
-Compliance Finding (2003), Authentication (3002), Account Change (3001),
-Operating System Patch State (5004), API Activity (6003), Web Resources Activity
-(6001), and File Hosting Activity (6006).
+mandatory runtime validation. Covers **all 53 base OCSF classes across all eight
+categories** — each with a typed builder.
 
 This is an internal library. Other services import it to turn their own
 detection signals into valid OCSF events; the library owns the OCSF field
