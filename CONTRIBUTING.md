@@ -27,7 +27,9 @@ Every change must pass all four gates locally (CI enforces the same):
 uv run ruff check .        # lint (incl. docstring + annotation rules)
 uv run ruff format --check .  # formatting
 uv run mypy                # strict type-checking
-uv run pytest -q --ignore=tests/test_integ_ocsf_schema.py   # unit tests
+uv run pytest -q \
+  --ignore=tests/test_integ_ocsf_schema.py \
+  --ignore=tests/test_schema_completeness.py   # unit tests (network tests excluded)
 ```
 
 ### Docstrings and type hints
@@ -38,18 +40,26 @@ uv run pytest -q --ignore=tests/test_integ_ocsf_schema.py   # unit tests
 - Tests and the codegen script are exempt from docstring rules (see
   `[tool.ruff.lint.per-file-ignores]`).
 
-## Running the OCSF schema conformance test
+## Running the OCSF schema tests (conformance + completeness)
 
-The integration test in `tests/test_integ_ocsf_schema.py` validates one emitted
-event per supported class against a JSON Schema built from the OCSF metaschema
-(via `ocsf-lib`) for the pinned version. It is skipped unless
-`OCSF_SCHEMA_VALIDATION=1` is set (it fetches the metaschema over the network):
+Two network-gated test modules cross-check the library against the OCSF
+metaschema (via `ocsf-lib`, the source schema.ocsf.io is generated from) for the
+pinned version, with `at_least_one`/`just_one` constraints enforced:
+
+- `tests/test_integ_ocsf_schema.py` — every emitted class **conforms** to the schema.
+- `tests/test_schema_completeness.py` — coverage is **complete and accurate**:
+  every non-deprecated base class is supported (no missing, none extra), and each
+  class's uid / category / name / activity enum and the observable type set match
+  the schema exactly.
+
+Both are skipped unless `OCSF_SCHEMA_VALIDATION=1` is set (they need network):
 
 ```bash
-OCSF_SCHEMA_VALIDATION=1 uv run pytest tests/test_integ_ocsf_schema.py -v
+OCSF_SCHEMA_VALIDATION=1 uv run pytest \
+  tests/test_integ_ocsf_schema.py tests/test_schema_completeness.py -v
 ```
 
-CI runs this as a **blocking** job.
+CI runs both as a **blocking** job.
 
 ## Changing the OCSF version or regenerating models
 

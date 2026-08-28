@@ -30,12 +30,15 @@ jobs:
         run: uv run mypy
 
       - name: Pytest (unit)
-        # Exclude the OCSF-schema conformance test; it runs as its own job (it
-        # fetches schemas from schema.ocsf.io and needs network access).
-        run: uv run pytest -q --ignore=tests/test_integ_ocsf_schema.py
+        # Exclude the network-gated schema tests; they run as their own job (they
+        # fetch the OCSF metaschema and need network access).
+        run: >-
+          uv run pytest -q
+          --ignore=tests/test_integ_ocsf_schema.py
+          --ignore=tests/test_schema_completeness.py
 
   ocsf-schema-validation:
-    name: OCSF 1.5 schema conformance (blocking)
+    name: OCSF 1.5 schema conformance + completeness (blocking)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,10 +51,14 @@ jobs:
       - name: Sync project
         run: uv sync
 
-      # Validates one emitted event per supported class against a JSON Schema
-      # built from the OCSF metaschema (via ocsf-lib) for the pinned version.
-      # OCSF_SCHEMA_VALIDATION=1 turns the otherwise-skipped test into a hard run.
-      - name: Validate emitted events against the OCSF schema
+      # Two checks against the OCSF 1.5 metaschema (via ocsf-lib), constraints
+      # enforced: (1) every emitted class conforms; (2) our coverage is complete
+      # and accurate (all base classes, identities, activity enums, observables).
+      # OCSF_SCHEMA_VALIDATION=1 turns the otherwise-skipped tests into hard runs.
+      - name: Validate coverage + conformance against the OCSF schema
         env:
           OCSF_SCHEMA_VALIDATION: "1"
-        run: uv run pytest -q tests/test_integ_ocsf_schema.py -v
+        run: >-
+          uv run pytest -q -v
+          tests/test_integ_ocsf_schema.py
+          tests/test_schema_completeness.py
