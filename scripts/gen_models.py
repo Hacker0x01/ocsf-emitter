@@ -196,11 +196,43 @@ def _build_defs(schema: Any, root: str) -> dict[str, dict[str, Any]]:
         }
         if required:
             entry["required"] = sorted(required)
+        # Stash OCSF constraints under a private key; metaschema_to_json_schema
+        # either translates them to anyOf/oneOf (conformance) or strips them
+        # (model generation must not see anyOf/oneOf -- it changes the models).
+        con = getattr(obj, "constraints", None)
+        if con:
+            entry["__constraints__"] = dict(con)
         defs[name] = entry
     return defs
 
 
-def metaschema_to_json_schema(schema: Any, roots: list[str]) -> dict[str, Any]:
+def _required_for_path(field: str) -> dict[str, Any]:
+    """JSON Schema fragment asserting a (possibly dotted) field path is present."""
+    parts = field.split(".")
+    node: dict[str, Any] = {"required": [parts[-1]]}
+    for parent in reversed(parts[:-1]):
+        node = {"required": [parent], "properties": {parent: node}}
+    return node
+
+
+def _apply_constraints(entry: dict[str, Any]) -> dict[str, Any]:
+    """Translate a def's stashed OCSF constraints into JSON Schema anyOf/oneOf."""
+    con = entry.pop("__constraints__", None)
+    if not con:
+        return entry
+    all_of = entry.setdefault("allOf", [])
+    for kind, fields in con.items():
+        branches = [_required_for_path(f) for f in fields]
+        if kind == "at_least_one":
+            all_of.append({"anyOf": branches})
+        elif kind == "just_one":
+            all_of.append({"oneOf": branches})
+    return entry
+
+
+def metaschema_to_json_schema(
+    schema: Any, roots: list[str], *, include_constraints: bool = False
+) -> dict[str, Any]:
     """Produce a self-contained draft JSON Schema for all ``roots``.
 
     Every root class and every object in the union of their transitive closures
@@ -208,11 +240,22 @@ def metaschema_to_json_schema(schema: Any, roots: list[str]) -> dict[str, Any]:
     objects sorted by name for a stable diff). The top-level node is a bare
     object -- ``datamodel-code-generator`` turns each ``$def`` into its own
     Pydantic model and produces no wrapper class for the root.
+
+    ``include_constraints`` translates OCSF ``at_least_one``/``just_one``
+    constraints into ``anyOf``/``oneOf`` on each def (for conformance checking).
+    Model generation leaves it False -- ``datamodel-code-generator`` would turn
+    those into union wrappers and change the emitted models.
     """
     defs: dict[str, dict[str, Any]] = {}
     for root in roots:
         # Union the closures; shared objects collide on name and dedup for free.
         defs.update(_build_defs(schema, root))
+
+    for entry in defs.values():
+        if include_constraints:
+            _apply_constraints(entry)
+        else:
+            entry.pop("__constraints__", None)
 
     # Stable ordering: roots in declared order, then remaining objects sorted.
     ordered: dict[str, dict[str, Any]] = {}

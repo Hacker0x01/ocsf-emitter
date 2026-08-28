@@ -231,12 +231,18 @@ class EmailRef:
 
 @dataclass(frozen=True, slots=True)
 class VulnerabilityRef:
-    """A vulnerability. Maps to an OCSF ``vulnerability`` object (no required sub-fields)."""
+    """A vulnerability. Maps to an OCSF ``vulnerability`` object.
+
+    OCSF requires ``just_one`` of ``cve`` / ``cwe`` / ``advisory`` -- supply
+    exactly one of ``cve_uid`` / ``cwe_uid`` / ``advisory_uid``.
+    """
 
     title: str | None = None
     severity: str | None = None
     desc: str | None = None
     cve_uid: str | None = None
+    cwe_uid: str | None = None
+    advisory_uid: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -324,10 +330,16 @@ class ManagedEntityRef:
 
 @dataclass(frozen=True, slots=True)
 class QueryEvidenceRef:
-    """Live-evidence query result. Maps to ``query_evidence`` (requires ``query_type_id``)."""
+    """Live-evidence query result. Maps to ``query_evidence`` (requires ``query_type_id``).
+
+    OCSF requires ``just_one`` queried object -- supply exactly one of ``user`` /
+    ``process`` (the subset we model).
+    """
 
     query_type_id: int = 0
     query_type: str | None = None
+    user: UserRef | None = None
+    process: ProcessRef | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -335,6 +347,30 @@ class KernelDriverRef:
     """A kernel driver. Maps to an OCSF ``kernel_driver`` object (requires ``file``)."""
 
     file: FileRef
+
+
+@dataclass(frozen=True, slots=True)
+class DatabaseRef:
+    """A database/table datastore. Maps to an OCSF ``database`` object.
+
+    OCSF requires ``type_id`` and ``at_least_one`` of ``name`` / ``uid``.
+    """
+
+    name: str | None = None
+    uid: str | None = None
+    type_id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class ResourceDetailsRef:
+    """A cloud resource. Maps to an OCSF ``resource_details`` object.
+
+    OCSF requires ``at_least_one`` of ``name`` / ``uid``.
+    """
+
+    name: str | None = None
+    uid: str | None = None
+    type: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
