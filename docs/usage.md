@@ -59,6 +59,13 @@ shape (`severity`, `activity`, `message`, `time_ms`, `observables`, `product`,
 `clock`) plus that class's required OCSF objects. `emit`/`validate` accept any of
 them.
 
+Builders require the inputs needed to satisfy each class's (and nested objects')
+OCSF `at_least_one` / `just_one` **constraints** — e.g. the network builders
+require a `src_endpoint`, `build_authorize_session` requires exactly one of
+`privileges` / `group`, and a `UserRef` needs a `name` or `uid`. Violations raise
+[`OcsfEmitterError`][ocsf_emitter.errors.OcsfEmitterError] at build time, and CI
+validates every class against the OCSF metaschema **with constraints enforced**.
+
 Each class carries its own activity vocabulary generated from the OCSF schema and
 named `<ModelClass>Action` (e.g. `AuthenticationAction`, `FileHostingAction`,
 `NetworkActivityAction`); the shared

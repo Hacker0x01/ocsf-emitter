@@ -34,20 +34,26 @@ def test_authentication_dst_endpoint_satisfies_constraint() -> None:
     assert "service" not in payload
 
 
-def test_api_activity_synthesizes_empty_actor_and_endpoint() -> None:
-    # actor + src_endpoint are required; empty objects are synthesized when the
-    # caller supplies neither, so the event still validates.
+def test_api_activity_synthesizes_empty_actor() -> None:
+    # actor has no OCSF constraint, so an empty actor is synthesized; src_endpoint
+    # is required (a real endpoint) and must be supplied.
     payload = emit(
         o.build_api_activity(
-            api=o.ApiCall(operation="X"), severity=o.Severity.LOW, activity=o.ApiActivityAction.READ
+            api=o.ApiCall(operation="X"),
+            src_endpoint=o.EndpointRef(ip="1.2.3.4"),
+            severity=o.Severity.LOW,
+            activity=o.ApiActivityAction.READ,
         )
     )
-    assert "actor" in payload and "src_endpoint" in payload
+    assert "actor" in payload and payload["src_endpoint"]["ip"] == "1.2.3.4"
 
 
 def test_validate_rejects_tampered_type_uid() -> None:
     evt = o.build_file_hosting(
-        file=o.FileRef(name="f.pdf"), severity=o.Severity.LOW, activity=o.FileHostingAction.SHARE
+        file=o.FileRef(name="f.pdf"),
+        src_endpoint=o.EndpointRef(ip="1.2.3.4"),
+        severity=o.Severity.LOW,
+        activity=o.FileHostingAction.SHARE,
     )
     object.__setattr__(evt, "type_uid", 600699)  # inconsistent with activity_id
     with pytest.raises(InvalidFindingError) as exc:
@@ -66,3 +72,29 @@ def test_missing_product_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ocsf_emitter.defaults, "_DEFAULT_PRODUCT", None)
     with pytest.raises(o.OcsfEmitterError):
         o.build_authentication(user=o.UserRef(name="a"), severity=o.Severity.LOW)
+
+
+def test_at_least_one_constraint_enforced() -> None:
+    # A user with neither name nor uid violates the OCSF user at_least_one rule.
+    with pytest.raises(o.OcsfEmitterError):
+        o.build_account_change(
+            user=o.UserRef(email="a@x.com"),
+            severity=o.Severity.LOW,
+            activity=o.AccountChangeAction(1),
+        )
+
+
+def test_just_one_constraint_enforced() -> None:
+    # authorize_session requires exactly one of privileges/group.
+    with pytest.raises(o.OcsfEmitterError):
+        o.build_authorize_session(
+            user=o.UserRef(name="a"),
+            privileges=["x"],
+            group=o.GroupRef(name="g"),
+            severity=o.Severity.LOW,
+            activity=o.AuthorizeSessionAction(1),
+        )
+    with pytest.raises(o.OcsfEmitterError):
+        o.build_authorize_session(
+            user=o.UserRef(name="a"), severity=o.Severity.LOW, activity=o.AuthorizeSessionAction(1)
+        )

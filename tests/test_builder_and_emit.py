@@ -56,8 +56,8 @@ def _build(clock: Callable[[], int]) -> DetectionFinding:
 @pytest.mark.parametrize("obs_type", list(ObservableType))
 def test_build_observable_covers_every_type(obs_type: ObservableType) -> None:
     # Every ObservableType must map to an id the Observable.type_id enum accepts.
-    # Regression guard: build_observable once used the wrong enum (TypeId6, which
-    # rejects process_name=20), so any finding with such an observable crashed.
+    # Regression guard: build_observable once used the wrong (narrower) enum, so
+    # some observables crashed at construction.
     from ocsf_emitter.builders import build_observable
 
     obs = build_observable(Observable(obs_type, "value"))
@@ -65,7 +65,7 @@ def test_build_observable_covers_every_type(obs_type: ObservableType) -> None:
 
 
 def test_finding_with_process_observable_round_trips() -> None:
-    # process_name (observable type_id 20) is the case the wrong-enum bug broke.
+    # process_name is observable type_id 9 in OCSF 1.5.0 (it was 20 in 1.1.0).
     finding = build_detection_finding(
         uid="det-proc",
         title="Suspicious process",
@@ -75,7 +75,7 @@ def test_finding_with_process_observable_round_trips() -> None:
         time_ms=FIXED_TIME_MS,
     )
     payload = emit(finding)
-    assert payload["observables"][0]["type_id"] == 20
+    assert payload["observables"][0]["type_id"] == 9
 
 
 def test_valid_finding_round_trips(fixed_clock: Callable[[], int]) -> None:

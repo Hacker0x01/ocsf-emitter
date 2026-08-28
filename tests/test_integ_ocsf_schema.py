@@ -47,7 +47,8 @@ def _class_schemas() -> dict[str, dict[str, Any]]:
     from scripts.gen_models import ROOT_CLASSES, metaschema_to_json_schema
 
     schema = OcsfApiClient().get_schema(OCSF_SCHEMA_VERSION)
-    doc = metaschema_to_json_schema(schema, ROOT_CLASSES)
+    # include_constraints=True enforces OCSF at_least_one/just_one rules too.
+    doc = metaschema_to_json_schema(schema, ROOT_CLASSES, include_constraints=True)
     defs: dict[str, Any] = doc["$defs"]
     # Key by class_uid so we can line up with each emitted payload.
     by_uid: dict[str, dict[str, Any]] = {}

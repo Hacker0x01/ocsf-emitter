@@ -78,6 +78,7 @@ from .domain import (
     ApiCall,
     ComplianceRef,
     ConnectionInfoRef,
+    DatabaseRef,
     DetectionSignal,
     DeviceRef,
     EmailRef,
@@ -95,6 +96,7 @@ from .domain import (
     OsintRef,
     ProcessRef,
     QueryEvidenceRef,
+    ResourceDetailsRef,
     ScanRef,
     ScriptRef,
     UasRef,
@@ -104,19 +106,78 @@ from .domain import (
 )
 from .errors import OcsfEmitterError
 
-# Our observable kinds -> OCSF observable type_id. See the OCSF observable
-# object spec for the full list; we map the subset we emit.
+
+def _at_least_one(constraint: str, **fields: object) -> None:
+    """Raise if none of ``fields`` is set (OCSF ``at_least_one`` constraint)."""
+    if not any(v not in (None, [], "") for v in fields.values()):
+        raise OcsfEmitterError(
+            f"OCSF requires at least one of {constraint}: pass one of {sorted(fields)}."
+        )
+
+
+def _just_one(constraint: str, **fields: object) -> None:
+    """Raise unless exactly one of ``fields`` is set (OCSF ``just_one`` constraint)."""
+    n = sum(1 for v in fields.values() if v not in (None, [], ""))
+    if n != 1:
+        raise OcsfEmitterError(
+            f"OCSF requires exactly one of {constraint}: pass one of {sorted(fields)} (got {n})."
+        )
+
+
+# Our observable kinds -> OCSF observable type_id (schema 1.5.0, full set). The
+# int is passed straight through; Pydantic coerces it into the observable model's
+# type_id enum. NOTE: these ids shifted between OCSF versions (e.g. Process Name
+# was 20 in 1.1.0, is 9 in 1.5.0; 20 is now Endpoint) -- keep in sync with the
+# schema (tests/test_observables.py guards this).
 _OBSERVABLE_TYPE_TO_ID: dict[ObservableType, int] = {
     ObservableType.UNKNOWN: 0,
     ObservableType.HOSTNAME: 1,
     ObservableType.IP_ADDRESS: 2,
-    ObservableType.URL: 6,
-    ObservableType.FILE_HASH: 8,
-    ObservableType.FILE_NAME: 7,
+    ObservableType.MAC_ADDRESS: 3,
     ObservableType.USER_NAME: 4,
     ObservableType.EMAIL_ADDRESS: 5,
-    ObservableType.PROCESS_NAME: 20,
+    ObservableType.URL: 6,
+    ObservableType.FILE_NAME: 7,
+    ObservableType.FILE_HASH: 8,
+    ObservableType.PROCESS_NAME: 9,
     ObservableType.RESOURCE_UID: 10,
+    ObservableType.PORT: 11,
+    ObservableType.SUBNET: 12,
+    ObservableType.COMMAND_LINE: 13,
+    ObservableType.COUNTRY: 14,
+    ObservableType.PROCESS_ID: 15,
+    ObservableType.HTTP_USER_AGENT: 16,
+    ObservableType.CWE_UID: 17,
+    ObservableType.CVE_UID: 18,
+    ObservableType.USER_CREDENTIAL_ID: 19,
+    ObservableType.ENDPOINT: 20,
+    ObservableType.USER: 21,
+    ObservableType.EMAIL: 22,
+    ObservableType.URL_OBJECT: 23,
+    ObservableType.FILE: 24,
+    ObservableType.PROCESS: 25,
+    ObservableType.GEO_LOCATION: 26,
+    ObservableType.CONTAINER: 27,
+    ObservableType.REGISTRY_KEY: 28,
+    ObservableType.REGISTRY_VALUE: 29,
+    ObservableType.FINGERPRINT: 30,
+    ObservableType.USER_UID: 31,
+    ObservableType.GROUP_NAME: 32,
+    ObservableType.GROUP_UID: 33,
+    ObservableType.ACCOUNT_NAME: 34,
+    ObservableType.ACCOUNT_UID: 35,
+    ObservableType.SCRIPT_CONTENT: 36,
+    ObservableType.SERIAL_NUMBER: 37,
+    ObservableType.RESOURCE_DETAILS_NAME: 38,
+    ObservableType.PROCESS_ENTITY_UID: 39,
+    ObservableType.EMAIL_SUBJECT: 40,
+    ObservableType.EMAIL_UID: 41,
+    ObservableType.MESSAGE_UID: 42,
+    ObservableType.REGISTRY_VALUE_NAME: 43,
+    ObservableType.ADVISORY_UID: 44,
+    ObservableType.FILE_PATH: 45,
+    ObservableType.REGISTRY_KEY_PATH: 46,
+    ObservableType.OTHER: 99,
 }
 
 
@@ -156,7 +217,8 @@ def build_attack(attack: MitreAttack) -> _m.Attack:
 
 
 def build_user(user: UserRef) -> _m.User:
-    """Map a domain UserRef to an OCSF user object."""
+    """Map a domain UserRef to an OCSF user object (requires name or uid)."""
+    _at_least_one("user.name / user.uid", name=user.name, uid=user.uid)
     return _m.User(
         name=user.name,
         uid=user.uid,
@@ -167,7 +229,8 @@ def build_user(user: UserRef) -> _m.User:
 
 
 def build_device(device: DeviceRef) -> _m.Device:
-    """Map a domain DeviceRef to an OCSF device object (with nested os)."""
+    """Map a domain DeviceRef to an OCSF device object (requires hostname or uid)."""
+    _at_least_one("device.hostname / device.uid", hostname=device.hostname, uid=device.uid)
     os = None
     if device.os_name or device.os_version or device.os_sp_name or device.os_sp_ver:
         os = _m.Os(
@@ -205,7 +268,8 @@ def build_api(api: ApiCall) -> _m.Api:
 
 
 def build_web_resource(resource: WebResourceRef) -> _m.WebResource:
-    """Map a domain WebResourceRef to an OCSF web_resource object."""
+    """Map a domain WebResourceRef to an OCSF web_resource object (requires name or uid)."""
+    _at_least_one("web_resource.name / .uid", name=resource.name, uid=resource.uid)
     return _m.WebResource(
         name=resource.name,
         type=resource.type,
@@ -215,7 +279,13 @@ def build_web_resource(resource: WebResourceRef) -> _m.WebResource:
 
 
 def build_endpoint(endpoint: EndpointRef) -> _m.NetworkEndpoint:
-    """Map a domain EndpointRef to an OCSF network_endpoint object."""
+    """Map a domain EndpointRef to an OCSF network_endpoint (requires ip/hostname/uid)."""
+    _at_least_one(
+        "network_endpoint.ip / .hostname / .uid",
+        ip=endpoint.ip,
+        hostname=endpoint.hostname,
+        uid=endpoint.uid,
+    )
     return _m.NetworkEndpoint(
         ip=endpoint.ip,
         hostname=endpoint.hostname,
@@ -234,14 +304,16 @@ def build_compliance(compliance: ComplianceRef) -> _m.Compliance:
 
 
 def build_process(process: ProcessRef) -> _m.Process:
-    """Map a domain ProcessRef to an OCSF process object."""
+    """Map a domain ProcessRef to an OCSF process object (requires pid or uid)."""
+    _at_least_one("process.pid / process.uid", pid=process.pid, uid=process.uid)
     return _m.Process(
         name=process.name, pid=process.pid, cmd_line=process.cmd_line, uid=process.uid
     )
 
 
 def build_email(email: EmailRef) -> _m.Email:
-    """Map a domain EmailRef to an OCSF email object (``from`` is an aliased field)."""
+    """Map a domain EmailRef to an OCSF email object (requires from or to; ``from`` is aliased)."""
+    _at_least_one("email.from / email.to", from_addr=email.from_addr, to=email.to)
     data: dict[str, object] = {}
     if email.from_addr is not None:
         data["from"] = email.from_addr
@@ -255,9 +327,24 @@ def build_email(email: EmailRef) -> _m.Email:
 
 
 def build_vulnerability(vuln: VulnerabilityRef) -> _m.Vulnerability:
-    """Map a domain VulnerabilityRef to an OCSF vulnerability object."""
+    """Map a domain VulnerabilityRef to an OCSF vulnerability (just one of cve/cwe/advisory)."""
+    _just_one(
+        "vulnerability.cve / .cwe / .advisory",
+        cve_uid=vuln.cve_uid,
+        cwe_uid=vuln.cwe_uid,
+        advisory_uid=vuln.advisory_uid,
+    )
     cve = _m.Cve(uid=vuln.cve_uid) if vuln.cve_uid is not None else None
-    return _m.Vulnerability(title=vuln.title, severity=vuln.severity, desc=vuln.desc, cve=cve)
+    cwe = _m.Cwe(uid=vuln.cwe_uid) if vuln.cwe_uid is not None else None
+    advisory = _m.Advisory(uid=vuln.advisory_uid) if vuln.advisory_uid is not None else None
+    return _m.Vulnerability(
+        title=vuln.title,
+        severity=vuln.severity,
+        desc=vuln.desc,
+        cve=cve,
+        cwe=cwe,
+        advisory=advisory,
+    )
 
 
 def build_connection_info(conn: ConnectionInfoRef) -> _m.NetworkConnectionInfo:
@@ -268,8 +355,21 @@ def build_connection_info(conn: ConnectionInfoRef) -> _m.NetworkConnectionInfo:
 
 
 def build_group(group: GroupRef) -> _m.Group:
-    """Map a domain GroupRef to an OCSF group object."""
+    """Map a domain GroupRef to an OCSF group object (requires name or uid)."""
+    _at_least_one("group.name / group.uid", name=group.name, uid=group.uid)
     return _m.Group(name=group.name, uid=group.uid, type=group.type)
+
+
+def build_database(database: DatabaseRef) -> _m.Database:
+    """Map a domain DatabaseRef to an OCSF database object (requires name or uid)."""
+    _at_least_one("database.name / database.uid", name=database.name, uid=database.uid)
+    return _m.Database(name=database.name, uid=database.uid, type_id=database.type_id)
+
+
+def build_resource_details(resource: ResourceDetailsRef) -> _m.ResourceDetails:
+    """Map a domain ResourceDetailsRef to an OCSF resource_details (requires name or uid)."""
+    _at_least_one("resource_details.name / .uid", name=resource.name, uid=resource.uid)
+    return _m.ResourceDetails(name=resource.name, uid=resource.uid, type=resource.type)
 
 
 def build_job(job: JobRef) -> _m.Job:
@@ -298,7 +398,8 @@ def build_script(script: ScriptRef) -> _m.Script:
 
 
 def build_scan(scan: ScanRef) -> _m.Scan:
-    """Map a domain ScanRef to an OCSF scan object (requires type_id)."""
+    """Map a domain ScanRef to an OCSF scan object (requires type_id, and name or uid)."""
+    _at_least_one("scan.name / scan.uid", name=scan.name, uid=scan.uid)
     return _m.Scan(type_id=scan.type_id, name=scan.name, uid=scan.uid)
 
 
@@ -308,15 +409,22 @@ def build_osint(osint: OsintRef) -> _m.Osint:
 
 
 def build_managed_entity(entity: ManagedEntityRef) -> _m.ManagedEntity:
-    """Map a domain ManagedEntityRef to an OCSF managed_entity object."""
+    """Map a domain ManagedEntityRef to an OCSF managed_entity object (requires name or uid)."""
+    _at_least_one("managed_entity.name / .uid", name=entity.name, uid=entity.uid)
     return _m.ManagedEntity(
         name=entity.name, uid=entity.uid, type=entity.type, type_id=entity.type_id
     )
 
 
 def build_query_evidence(query: QueryEvidenceRef) -> _m.QueryEvidence:
-    """Map a domain QueryEvidenceRef to an OCSF query_evidence object (requires query_type_id)."""
-    return _m.QueryEvidence(query_type_id=query.query_type_id, query_type=query.query_type)
+    """Map a domain QueryEvidenceRef to an OCSF query_evidence (just one queried object)."""
+    _just_one("query_evidence.user / .process", user=query.user, process=query.process)
+    return _m.QueryEvidence(
+        query_type_id=query.query_type_id,
+        query_type=query.query_type,
+        user=build_user(query.user) if query.user is not None else None,
+        process=build_process(query.process) if query.process is not None else None,
+    )
 
 
 def build_kernel_driver(driver: KernelDriverRef) -> _m.KernelDriver:
@@ -325,7 +433,13 @@ def build_kernel_driver(driver: KernelDriverRef) -> _m.KernelDriver:
 
 
 def build_uas(uas: UasRef) -> _m.UnmannedAerialSystem:
-    """Map a domain UasRef to an OCSF unmanned_aerial_system object."""
+    """Map a domain UasRef to an OCSF unmanned_aerial_system (requires name/serial_number/uid)."""
+    _at_least_one(
+        "unmanned_aerial_system.name / .serial_number / .uid",
+        name=uas.name,
+        serial_number=uas.serial_number,
+        uid=uas.uid,
+    )
     return _m.UnmannedAerialSystem(
         uid=uas.uid, name=uas.name, model=uas.model, serial_number=uas.serial_number
     )
@@ -637,7 +751,7 @@ def build_api_activity(
     api: ApiCall,
     severity: Severity,
     activity: ApiActivityAction = ApiActivityAction.READ,
-    src_endpoint: EndpointRef | None = None,
+    src_endpoint: EndpointRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -661,9 +775,12 @@ def build_api_activity(
         product=product,
         clock=clock,
     )
-    actor = _m.Actor(user=build_user(actor_user)) if actor_user is not None else _m.Actor()
-    endpoint = build_endpoint(src_endpoint) if src_endpoint is not None else _m.NetworkEndpoint()
-    return _m.ApiActivity(**core, api=build_api(api), actor=actor, src_endpoint=endpoint)
+    return _m.ApiActivity(
+        **core,
+        api=build_api(api),
+        actor=_actor(actor_user, product),
+        src_endpoint=build_endpoint(src_endpoint),
+    )
 
 
 def build_web_resources_activity(
@@ -702,7 +819,7 @@ def build_file_hosting(
     file: FileRef,
     severity: Severity,
     activity: FileHostingAction = FileHostingAction.SHARE,
-    src_endpoint: EndpointRef | None = None,
+    src_endpoint: EndpointRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -726,9 +843,12 @@ def build_file_hosting(
         product=product,
         clock=clock,
     )
-    actor = _m.Actor(user=build_user(actor_user)) if actor_user is not None else _m.Actor()
-    endpoint = build_endpoint(src_endpoint) if src_endpoint is not None else _m.NetworkEndpoint()
-    return _m.FileHosting(**core, file=build_file(file), actor=actor, src_endpoint=endpoint)
+    return _m.FileHosting(
+        **core,
+        file=build_file(file),
+        actor=_actor(actor_user, product),
+        src_endpoint=build_endpoint(src_endpoint),
+    )
 
 
 def build_compliance_finding(
@@ -781,20 +901,16 @@ def build_compliance_finding(
 # The remaining OCSF classes, one typed builder each. They share ``_core_fields``
 # and follow the same keyword shape (``severity``, ``activity``, ``message``,
 # ``time_ms``, ``observables``, ``product``, ``clock``); ``activity`` is required
-# (each class has a distinct vocabulary, so there's no safe default). Required
-# OCSF objects with no required sub-fields (actor, device, endpoint) are
-# synthesized empty when the caller passes nothing.
+# (each class has a distinct vocabulary, so there's no safe default). Objects with
+# their own OCSF constraints (device, endpoint) are required inputs; ``actor`` is
+# satisfied via the caller's ``actor_user`` or, failing that, the emitting
+# product's name (OCSF ``actor.at_least_one`` accepts ``app_name``).
 # --------------------------------------------------------------------------- #
-def _actor(user: UserRef | None) -> _m.Actor:
-    return _m.Actor(user=build_user(user)) if user is not None else _m.Actor()
-
-
-def _device_or_empty(device: DeviceRef | None) -> _m.Device:
-    return build_device(device) if device is not None else _m.Device(type_id=0)
-
-
-def _endpoint_or_empty(endpoint: EndpointRef | None) -> _m.NetworkEndpoint:
-    return build_endpoint(endpoint) if endpoint is not None else _m.NetworkEndpoint()
+def _actor(user: UserRef | None, product: _m.Product | None) -> _m.Actor:
+    if user is not None:
+        return _m.Actor(user=build_user(user))
+    prod = product if product is not None else defaults.default_product()
+    return _m.Actor(app_name=prod.name if prod is not None else "ocsf-emitter")
 
 
 def _core(
@@ -826,7 +942,7 @@ def build_file_activity(
     file: FileRef,
     severity: Severity,
     activity: FileActivityAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -839,7 +955,10 @@ def build_file_activity(
         OcsfClass.FILE_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
     return _m.FileActivity(
-        **core, actor=_actor(actor_user), device=_device_or_empty(device), file=build_file(file)
+        **core,
+        actor=_actor(actor_user, product),
+        device=build_device(device),
+        file=build_file(file),
     )
 
 
@@ -848,7 +967,7 @@ def build_kernel_extension_activity(
     driver: KernelDriverRef,
     severity: Severity,
     activity: KernelExtensionActivityAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -869,8 +988,8 @@ def build_kernel_extension_activity(
     )
     return _m.KernelExtensionActivity(
         **core,
-        actor=_actor(actor_user),
-        device=_device_or_empty(device),
+        actor=_actor(actor_user, product),
+        device=build_device(device),
         driver=build_kernel_driver(driver),
     )
 
@@ -880,7 +999,7 @@ def build_kernel_activity(
     kernel: KernelRef,
     severity: Severity,
     activity: KernelActivityAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -894,8 +1013,8 @@ def build_kernel_activity(
     )
     return _m.KernelActivity(
         **core,
-        actor=_actor(actor_user),
-        device=_device_or_empty(device),
+        actor=_actor(actor_user, product),
+        device=build_device(device),
         kernel=build_kernel(kernel),
     )
 
@@ -905,7 +1024,7 @@ def build_memory_activity(
     process: ProcessRef,
     severity: Severity,
     activity: MemoryActivityAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -919,8 +1038,8 @@ def build_memory_activity(
     )
     return _m.MemoryActivity(
         **core,
-        actor=_actor(actor_user),
-        device=_device_or_empty(device),
+        actor=_actor(actor_user, product),
+        device=build_device(device),
         process=build_process(process),
     )
 
@@ -930,7 +1049,7 @@ def build_module_activity(
     module: ModuleRef,
     severity: Severity,
     activity: ModuleActivityAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -944,8 +1063,8 @@ def build_module_activity(
     )
     return _m.ModuleActivity(
         **core,
-        actor=_actor(actor_user),
-        device=_device_or_empty(device),
+        actor=_actor(actor_user, product),
+        device=build_device(device),
         module=build_module(module),
     )
 
@@ -955,7 +1074,7 @@ def build_scheduled_job_activity(
     job: JobRef,
     severity: Severity,
     activity: ScheduledJobActivityAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
@@ -973,7 +1092,7 @@ def build_scheduled_job_activity(
         product,
         clock,
     )
-    return _m.ScheduledJobActivity(**core, device=_device_or_empty(device), job=build_job(job))
+    return _m.ScheduledJobActivity(**core, device=build_device(device), job=build_job(job))
 
 
 def build_process_activity(
@@ -981,7 +1100,7 @@ def build_process_activity(
     process: ProcessRef,
     severity: Severity,
     activity: ProcessActivityAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -1002,23 +1121,25 @@ def build_process_activity(
     )
     return _m.ProcessActivity(
         **core,
-        actor=_actor(actor_user),
-        device=_device_or_empty(device),
+        actor=_actor(actor_user, product),
+        device=build_device(device),
         process=build_process(process),
     )
 
 
 def build_event_log_activity(
     *,
+    log_name: str,
     severity: Severity,
     activity: EventLogActvityAction,
+    log_provider: str | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.EventLogActvity:
-    """Build an OCSF Event Log Activity (1008) event."""
+    """Build an OCSF Event Log Activity (1008) event (requires a log identifier)."""
     core = _core(
         OcsfClass.EVENT_LOG_ACTVITY,
         activity,
@@ -1029,7 +1150,7 @@ def build_event_log_activity(
         product,
         clock,
     )
-    return _m.EventLogActvity(**core)
+    return _m.EventLogActvity(**core, log_name=log_name, log_provider=log_provider)
 
 
 def build_script_activity(
@@ -1037,7 +1158,7 @@ def build_script_activity(
     script: ScriptRef,
     severity: Severity,
     activity: ScriptActivityAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -1051,8 +1172,8 @@ def build_script_activity(
     )
     return _m.ScriptActivity(
         **core,
-        actor=_actor(actor_user),
-        device=_device_or_empty(device),
+        actor=_actor(actor_user, product),
+        device=build_device(device),
         script=build_script(script),
     )
 
@@ -1104,6 +1225,8 @@ def build_incident_finding(
     title: str,
     severity: Severity,
     activity: IncidentFindingAction,
+    assignee: UserRef | None = None,
+    assignee_group: GroupRef | None = None,
     status: Status = Status.NEW,
     uid: str | None = None,
     description: str | None = None,
@@ -1114,7 +1237,8 @@ def build_incident_finding(
     clock: Callable[[], int] = _now_ms,
     uid_factory: Callable[[], str] = _new_uid,
 ) -> _m.IncidentFinding:
-    """Build an OCSF Incident Finding (2005) event (requires a finding_info list + status)."""
+    """Build an OCSF Incident Finding (2005) event (requires an assignee or assignee_group)."""
+    _at_least_one("assignee / assignee_group", assignee=assignee, assignee_group=assignee_group)
     core = _core(
         OcsfClass.INCIDENT_FINDING,
         activity,
@@ -1129,6 +1253,8 @@ def build_incident_finding(
         **core,
         finding_info_list=[_finding_info(uid, title, description, uid_factory)],
         status_id=int(defaults.status_id(status)),
+        assignee=build_user(assignee) if assignee is not None else None,
+        assignee_group=build_group(assignee_group) if assignee_group is not None else None,
     )
 
 
@@ -1167,6 +1293,8 @@ def build_application_security_posture_finding(
     title: str,
     severity: Severity,
     activity: ApplicationSecurityPostureFindingAction,
+    compliance: ComplianceRef | None = None,
+    vulnerabilities: Sequence[VulnerabilityRef] | None = None,
     uid: str | None = None,
     description: str | None = None,
     message: str | None = None,
@@ -1176,7 +1304,10 @@ def build_application_security_posture_finding(
     clock: Callable[[], int] = _now_ms,
     uid_factory: Callable[[], str] = _new_uid,
 ) -> _m.ApplicationSecurityPostureFinding:
-    """Build an OCSF Application Security Posture Finding (2007) event."""
+    """Build an OCSF App Security Posture Finding (2007); needs compliance or vulnerabilities."""
+    _at_least_one(
+        "compliance / vulnerabilities", compliance=compliance, vulnerabilities=vulnerabilities
+    )
     core = _core(
         OcsfClass.APPLICATION_SECURITY_POSTURE_FINDING,
         activity,
@@ -1188,7 +1319,12 @@ def build_application_security_posture_finding(
         clock,
     )
     return _m.ApplicationSecurityPostureFinding(
-        **core, finding_info=_finding_info(uid, title, description, uid_factory)
+        **core,
+        finding_info=_finding_info(uid, title, description, uid_factory),
+        compliance=build_compliance(compliance) if compliance is not None else None,
+        vulnerabilities=(
+            [build_vulnerability(v) for v in vulnerabilities] if vulnerabilities else None
+        ),
     )
 
 
@@ -1198,13 +1334,16 @@ def build_authorize_session(
     user: UserRef,
     severity: Severity,
     activity: AuthorizeSessionAction,
+    privileges: Sequence[str] | None = None,
+    group: GroupRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.AuthorizeSession:
-    """Build an OCSF Authorize Session (3003) event."""
+    """Build an OCSF Authorize Session (3003) event (requires exactly one of privileges/group)."""
+    _just_one("privileges / group", privileges=privileges, group=group)
     core = _core(
         OcsfClass.AUTHORIZE_SESSION,
         activity,
@@ -1215,7 +1354,12 @@ def build_authorize_session(
         product,
         clock,
     )
-    return _m.AuthorizeSession(**core, user=build_user(user))
+    return _m.AuthorizeSession(
+        **core,
+        user=build_user(user),
+        privileges=list(privileges) if privileges else None,
+        group=build_group(group) if group is not None else None,
+    )
 
 
 def build_entity_management(
@@ -1292,25 +1436,25 @@ def build_network_activity(
     *,
     severity: Severity,
     activity: NetworkActivityAction,
+    src_endpoint: EndpointRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.NetworkActivity:
-    """Build an OCSF Network Activity (4001) event."""
-    return _m.NetworkActivity(
-        **_core(
-            OcsfClass.NETWORK_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    """Build an OCSF Network Activity (4001) event (requires src or dst endpoint)."""
+    core = _core(
+        OcsfClass.NETWORK_ACTIVITY,
+        activity,
+        severity,
+        message,
+        observables,
+        time_ms,
+        product,
+        clock,
     )
+    return _m.NetworkActivity(**core, src_endpoint=build_endpoint(src_endpoint))
 
 
 def build_http_activity(
@@ -1324,168 +1468,118 @@ def build_http_activity(
     clock: Callable[[], int] = _now_ms,
 ) -> _m.HttpActivity:
     """Build an OCSF HTTP Activity (4002) event."""
-    return _m.HttpActivity(
-        **_core(
-            OcsfClass.HTTP_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    core = _core(
+        OcsfClass.HTTP_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
+    return _m.HttpActivity(**core, http_request=_m.HttpRequest())
 
 
 def build_dns_activity(
     *,
     severity: Severity,
     activity: DnsActivityAction,
+    src_endpoint: EndpointRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.DnsActivity:
-    """Build an OCSF DNS Activity (4003) event."""
-    return _m.DnsActivity(
-        **_core(
-            OcsfClass.DNS_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    """Build an OCSF DNS Activity (4003) event (requires src or dst endpoint)."""
+    core = _core(
+        OcsfClass.DNS_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
+    return _m.DnsActivity(**core, src_endpoint=build_endpoint(src_endpoint))
 
 
 def build_dhcp_activity(
     *,
     severity: Severity,
     activity: DhcpActivityAction,
+    src_endpoint: EndpointRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.DhcpActivity:
-    """Build an OCSF DHCP Activity (4004) event."""
-    return _m.DhcpActivity(
-        **_core(
-            OcsfClass.DHCP_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    """Build an OCSF DHCP Activity (4004) event (requires src or dst endpoint)."""
+    core = _core(
+        OcsfClass.DHCP_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
+    return _m.DhcpActivity(**core, src_endpoint=build_endpoint(src_endpoint))
 
 
 def build_rdp_activity(
     *,
     severity: Severity,
     activity: RdpActivityAction,
+    src_endpoint: EndpointRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.RdpActivity:
-    """Build an OCSF RDP Activity (4005) event."""
-    return _m.RdpActivity(
-        **_core(
-            OcsfClass.RDP_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    """Build an OCSF RDP Activity (4005) event (requires src or dst endpoint)."""
+    core = _core(
+        OcsfClass.RDP_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
+    return _m.RdpActivity(**core, src_endpoint=build_endpoint(src_endpoint))
 
 
 def build_smb_activity(
     *,
     severity: Severity,
     activity: SmbActivityAction,
+    src_endpoint: EndpointRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.SmbActivity:
-    """Build an OCSF SMB Activity (4006) event."""
-    return _m.SmbActivity(
-        **_core(
-            OcsfClass.SMB_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    """Build an OCSF SMB Activity (4006) event (requires src or dst endpoint)."""
+    core = _core(
+        OcsfClass.SMB_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
+    return _m.SmbActivity(**core, src_endpoint=build_endpoint(src_endpoint))
 
 
 def build_ssh_activity(
     *,
     severity: Severity,
     activity: SshActivityAction,
+    src_endpoint: EndpointRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.SshActivity:
-    """Build an OCSF SSH Activity (4007) event."""
-    return _m.SshActivity(
-        **_core(
-            OcsfClass.SSH_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    """Build an OCSF SSH Activity (4007) event (requires src or dst endpoint)."""
+    core = _core(
+        OcsfClass.SSH_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
+    return _m.SshActivity(**core, src_endpoint=build_endpoint(src_endpoint))
 
 
 def build_ftp_activity(
     *,
     severity: Severity,
     activity: FtpActivityAction,
+    src_endpoint: EndpointRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.FtpActivity:
-    """Build an OCSF FTP Activity (4008) event."""
-    return _m.FtpActivity(
-        **_core(
-            OcsfClass.FTP_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    """Build an OCSF FTP Activity (4008) event (requires src or dst endpoint)."""
+    core = _core(
+        OcsfClass.FTP_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
+    return _m.FtpActivity(**core, src_endpoint=build_endpoint(src_endpoint))
 
 
 def build_email_activity(
@@ -1510,6 +1604,7 @@ def build_email_activity(
 def build_ntp_activity(
     *,
     version: str,
+    src_endpoint: EndpointRef,
     severity: Severity,
     activity: NtpActivityAction,
     message: str | None = None,
@@ -1518,15 +1613,16 @@ def build_ntp_activity(
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.NtpActivity:
-    """Build an OCSF NTP Activity (4013) event (requires version)."""
+    """Build an OCSF NTP Activity (4013) event (requires version + src or dst endpoint)."""
     core = _core(
         OcsfClass.NTP_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
-    return _m.NtpActivity(**core, version=version)
+    return _m.NtpActivity(**core, version=version, src_endpoint=build_endpoint(src_endpoint))
 
 
 def build_tunnel_activity(
     *,
+    src_endpoint: EndpointRef,
     severity: Severity,
     activity: TunnelActivityAction,
     message: str | None = None,
@@ -1535,19 +1631,11 @@ def build_tunnel_activity(
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.TunnelActivity:
-    """Build an OCSF Tunnel Activity (4014) event."""
-    return _m.TunnelActivity(
-        **_core(
-            OcsfClass.TUNNEL_ACTIVITY,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+    """Build an OCSF Tunnel Activity (4014) event (requires a src_endpoint/session/…)."""
+    core = _core(
+        OcsfClass.TUNNEL_ACTIVITY, activity, severity, message, observables, time_ms, product, clock
     )
+    return _m.TunnelActivity(**core, src_endpoint=build_endpoint(src_endpoint))
 
 
 # --- Discovery [5] ---------------------------------------------------------- #
@@ -1657,6 +1745,7 @@ def build_osint_inventory_info(
 
 def build_cloud_resources_inventory_info(
     *,
+    resources: Sequence[ResourceDetailsRef],
     severity: Severity,
     activity: CloudResourcesInventoryInfoAction,
     message: str | None = None,
@@ -1665,18 +1754,20 @@ def build_cloud_resources_inventory_info(
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.CloudResourcesInventoryInfo:
-    """Build an OCSF Cloud Resources Inventory Info (5023) event."""
+    """Build an OCSF Cloud Resources Inventory Info (5023) event (requires resources/…)."""
+    _at_least_one("cloud_resources.resources", resources=list(resources))
+    core = _core(
+        OcsfClass.CLOUD_RESOURCES_INVENTORY_INFO,
+        activity,
+        severity,
+        message,
+        observables,
+        time_ms,
+        product,
+        clock,
+    )
     return _m.CloudResourcesInventoryInfo(
-        **_core(
-            OcsfClass.CLOUD_RESOURCES_INVENTORY_INFO,
-            activity,
-            severity,
-            message,
-            observables,
-            time_ms,
-            product,
-            clock,
-        )
+        **core, resources=[build_resource_details(r) for r in resources]
     )
 
 
@@ -1686,7 +1777,7 @@ def build_evidence_info(
     query_result_id: int,
     severity: Severity,
     activity: EvidenceInfoAction,
-    device: DeviceRef | None = None,
+    device: DeviceRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
@@ -1699,7 +1790,7 @@ def build_evidence_info(
     )
     return _m.EvidenceInfo(
         **core,
-        device=_device_or_empty(device),
+        device=build_device(device),
         query_evidence=build_query_evidence(query_evidence),
         query_result_id=query_result_id,
     )
@@ -1736,9 +1827,10 @@ def build_application_lifecycle(
 
 def build_datastore_activity(
     *,
+    database: DatabaseRef,
+    src_endpoint: EndpointRef,
     severity: Severity,
     activity: DatastoreActivityAction,
-    src_endpoint: EndpointRef | None = None,
     actor_user: UserRef | None = None,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
@@ -1746,7 +1838,7 @@ def build_datastore_activity(
     product: _m.Product | None = None,
     clock: Callable[[], int] = _now_ms,
 ) -> _m.DatastoreActivity:
-    """Build an OCSF Datastore Activity (6005) event."""
+    """Build an OCSF Datastore Activity (6005) event (requires a database/databucket/table)."""
     core = _core(
         OcsfClass.DATASTORE_ACTIVITY,
         activity,
@@ -1758,7 +1850,10 @@ def build_datastore_activity(
         clock,
     )
     return _m.DatastoreActivity(
-        **core, actor=_actor(actor_user), src_endpoint=_endpoint_or_empty(src_endpoint)
+        **core,
+        actor=_actor(actor_user, product),
+        src_endpoint=build_endpoint(src_endpoint),
+        database=build_database(database),
     )
 
 
@@ -1920,7 +2015,7 @@ def build_drone_flights_activity(
     operator: UserRef,
     severity: Severity,
     activity: DroneFlightsActivityAction,
-    dst_endpoint: EndpointRef | None = None,
+    dst_endpoint: EndpointRef,
     message: str | None = None,
     observables: Sequence[Observable] | None = None,
     time_ms: int | None = None,
@@ -1942,7 +2037,7 @@ def build_drone_flights_activity(
         **core,
         unmanned_aerial_system=build_uas(uas),
         unmanned_system_operator=build_user(operator),
-        dst_endpoint=_endpoint_or_empty(dst_endpoint),
+        dst_endpoint=build_endpoint(dst_endpoint),
     )
 
 
