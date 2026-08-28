@@ -104,19 +104,60 @@ from .domain import (
 )
 from .errors import OcsfEmitterError
 
-# Our observable kinds -> OCSF observable type_id. See the OCSF observable
-# object spec for the full list; we map the subset we emit.
+# Our observable kinds -> OCSF observable type_id (schema 1.5.0, full set). The
+# int is passed straight through; Pydantic coerces it into the observable model's
+# type_id enum. NOTE: these ids shifted between OCSF versions (e.g. Process Name
+# was 20 in 1.1.0, is 9 in 1.5.0; 20 is now Endpoint) -- keep in sync with the
+# schema (tests/test_observables.py guards this).
 _OBSERVABLE_TYPE_TO_ID: dict[ObservableType, int] = {
     ObservableType.UNKNOWN: 0,
     ObservableType.HOSTNAME: 1,
     ObservableType.IP_ADDRESS: 2,
-    ObservableType.URL: 6,
-    ObservableType.FILE_HASH: 8,
-    ObservableType.FILE_NAME: 7,
+    ObservableType.MAC_ADDRESS: 3,
     ObservableType.USER_NAME: 4,
     ObservableType.EMAIL_ADDRESS: 5,
-    ObservableType.PROCESS_NAME: 20,
+    ObservableType.URL: 6,
+    ObservableType.FILE_NAME: 7,
+    ObservableType.FILE_HASH: 8,
+    ObservableType.PROCESS_NAME: 9,
     ObservableType.RESOURCE_UID: 10,
+    ObservableType.PORT: 11,
+    ObservableType.SUBNET: 12,
+    ObservableType.COMMAND_LINE: 13,
+    ObservableType.COUNTRY: 14,
+    ObservableType.PROCESS_ID: 15,
+    ObservableType.HTTP_USER_AGENT: 16,
+    ObservableType.CWE_UID: 17,
+    ObservableType.CVE_UID: 18,
+    ObservableType.USER_CREDENTIAL_ID: 19,
+    ObservableType.ENDPOINT: 20,
+    ObservableType.USER: 21,
+    ObservableType.EMAIL: 22,
+    ObservableType.URL_OBJECT: 23,
+    ObservableType.FILE: 24,
+    ObservableType.PROCESS: 25,
+    ObservableType.GEO_LOCATION: 26,
+    ObservableType.CONTAINER: 27,
+    ObservableType.REGISTRY_KEY: 28,
+    ObservableType.REGISTRY_VALUE: 29,
+    ObservableType.FINGERPRINT: 30,
+    ObservableType.USER_UID: 31,
+    ObservableType.GROUP_NAME: 32,
+    ObservableType.GROUP_UID: 33,
+    ObservableType.ACCOUNT_NAME: 34,
+    ObservableType.ACCOUNT_UID: 35,
+    ObservableType.SCRIPT_CONTENT: 36,
+    ObservableType.SERIAL_NUMBER: 37,
+    ObservableType.RESOURCE_DETAILS_NAME: 38,
+    ObservableType.PROCESS_ENTITY_UID: 39,
+    ObservableType.EMAIL_SUBJECT: 40,
+    ObservableType.EMAIL_UID: 41,
+    ObservableType.MESSAGE_UID: 42,
+    ObservableType.REGISTRY_VALUE_NAME: 43,
+    ObservableType.ADVISORY_UID: 44,
+    ObservableType.FILE_PATH: 45,
+    ObservableType.REGISTRY_KEY_PATH: 46,
+    ObservableType.OTHER: 99,
 }
 
 

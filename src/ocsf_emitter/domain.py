@@ -15,22 +15,68 @@ from .defaults import Activity, Confidence, RiskLevel, Severity, Status
 
 
 class ObservableType(enum.Enum):
-    """The observable kinds we currently emit, mapped to OCSF observable type_id.
+    """Every OCSF observable ``type_id`` (schema 1.5.0), by our vocabulary name.
 
-    (OCSF defines ~48 types; we expose the subset our detectors produce. Add
-    members here and to ``_OBSERVABLE_TYPE_TO_ID`` in ``builders`` as needed.)
+    Members mirror the full ``observable.type_id`` enum; each maps to its OCSF
+    ``type_id`` int in ``_OBSERVABLE_TYPE_TO_ID`` (``builders``). The member value
+    is the human name used as the fallback ``observable.name`` when a caller
+    doesn't supply one. Kept in sync with the schema by
+    ``tests/test_observables.py``.
     """
 
-    UNKNOWN = "unknown"
-    HOSTNAME = "hostname"
-    IP_ADDRESS = "ip_address"
-    URL = "url"
-    FILE_HASH = "file_hash"
-    FILE_NAME = "file_name"
-    USER_NAME = "user_name"
-    EMAIL_ADDRESS = "email_address"
-    PROCESS_NAME = "process_name"
-    RESOURCE_UID = "resource_uid"
+    # "Observable by Dictionary Type" (0-12, 45-46) + core scalars.
+    UNKNOWN = "unknown"  # 0
+    HOSTNAME = "hostname"  # 1
+    IP_ADDRESS = "ip_address"  # 2
+    MAC_ADDRESS = "mac_address"  # 3
+    USER_NAME = "user_name"  # 4
+    EMAIL_ADDRESS = "email_address"  # 5
+    URL = "url"  # 6 (URL String)
+    FILE_NAME = "file_name"  # 7
+    FILE_HASH = "file_hash"  # 8 (Hash)
+    PROCESS_NAME = "process_name"  # 9
+    RESOURCE_UID = "resource_uid"  # 10
+    PORT = "port"  # 11
+    SUBNET = "subnet"  # 12
+    # "Observable by Dictionary Attribute" (13-16, 19, 36-37, 42, 45-46).
+    COMMAND_LINE = "command_line"  # 13
+    COUNTRY = "country"  # 14
+    PROCESS_ID = "process_id"  # 15
+    HTTP_USER_AGENT = "http_user_agent"  # 16
+    USER_CREDENTIAL_ID = "user_credential_id"  # 19
+    SCRIPT_CONTENT = "script_content"  # 36
+    SERIAL_NUMBER = "serial_number"  # 37
+    MESSAGE_UID = "message_uid"  # 42
+    FILE_PATH = "file_path"  # 45
+    REGISTRY_KEY_PATH = "registry_key_path"  # 46
+    # "Observable by Object-Specific Attribute" (17-18, 31-35, 38-41, 43-44).
+    CWE_UID = "cwe_uid"  # 17
+    CVE_UID = "cve_uid"  # 18
+    USER_UID = "user_uid"  # 31
+    GROUP_NAME = "group_name"  # 32
+    GROUP_UID = "group_uid"  # 33
+    ACCOUNT_NAME = "account_name"  # 34
+    ACCOUNT_UID = "account_uid"  # 35
+    RESOURCE_DETAILS_NAME = "resource_details_name"  # 38
+    PROCESS_ENTITY_UID = "process_entity_uid"  # 39
+    EMAIL_SUBJECT = "email_subject"  # 40
+    EMAIL_UID = "email_uid"  # 41
+    REGISTRY_VALUE_NAME = "registry_value_name"  # 43
+    ADVISORY_UID = "advisory_uid"  # 44
+    # "Observable by Object" (20-30).
+    ENDPOINT = "endpoint"  # 20
+    USER = "user"  # 21
+    EMAIL = "email"  # 22
+    URL_OBJECT = "url_object"  # 23 (Uniform Resource Locator object)
+    FILE = "file"  # 24
+    PROCESS = "process"  # 25
+    GEO_LOCATION = "geo_location"  # 26
+    CONTAINER = "container"  # 27
+    REGISTRY_KEY = "registry_key"  # 28
+    REGISTRY_VALUE = "registry_value"  # 29
+    FINGERPRINT = "fingerprint"  # 30
+    # Catch-all.
+    OTHER = "other"  # 99
 
 
 @dataclass(frozen=True, slots=True)
